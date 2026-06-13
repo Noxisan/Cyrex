@@ -15,7 +15,7 @@ _Hero screenshot (commit graph) to be added._
 ## Highlights
 
 - Visual commit graph with lanes, refs, and tags — the signature view, rendered from real repository state.
-- Stage by file, hunk, and line; amend; signed commits where configured. (In progress.)
+- Stage by file, hunk, and line; amend; signed commits where configured.
 - Branch, merge, rebase (including interactive), cherry-pick, revert, stash.
 - Side-by-side and inline diffs with syntax highlighting.
 - Multi-repo management with quick switching.
@@ -49,7 +49,7 @@ _Diff view, sidebar, and staging area screenshots to be added under `docs/screen
 | Stage / unstage / discard by file | Done |
 | Stage / unstage by hunk and line | Done |
 | Commit staged changes | Done |
-| Amend / sign commits | Planned |
+| Amend / sign commits | Done |
 | Merge / cherry-pick / revert | Done |
 | In-progress operation banner (continue / abort) | Done |
 | Rebase | Done |
