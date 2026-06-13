@@ -21,9 +21,9 @@ function xtermTheme(): ITheme {
     red: v('--color-danger'),
     green: v('--color-diff-add'),
     yellow: v('--color-conflict'),
-    blue: v('--color-lane-1'),
-    magenta: v('--color-lane-4'),
-    cyan: v('--color-lane-5'),
+    blue: v('--color-lane-0'),
+    magenta: v('--color-lane-2'),
+    cyan: v('--color-lane-1'),
     white: v('--color-fg'),
     brightBlack: v('--color-fg-subtle')
   }

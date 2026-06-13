@@ -1,16 +1,19 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Check, Cloud, GitBranch, Tag } from 'lucide-react'
 import { computeLayout } from '@shared/graph'
 import type { Commit } from '@shared/types'
-import { useCherryPick, useLog, useRevert, useSearch } from '../hooks/useRepo'
+import { useBranches, useCherryPick, useLog, useRevert, useSearch } from '../hooks/useRepo'
 import { useRepoStore } from '../store/repoStore'
 import { ContextMenu } from './ContextMenu'
 import type { MenuState } from './ContextMenu'
 
 const ROW_H = 30
-const LANE_W = 15
-const LEFT_PAD = 10
-const DOT_R = 4
+const LANE_W = 16
+const LANE_PAD = 12
+const REFS_W = 200
+const DOT_OUTER = 5
+const DOT_INNER = 3.2
 
 const LANE_VARS = [
   '--color-lane-0',
@@ -22,26 +25,76 @@ const LANE_VARS = [
 ]
 const laneColor = (lane: number): string => `var(${LANE_VARS[lane % LANE_VARS.length]})`
 
-function RefBadge({ name }: { name: string }): React.JSX.Element {
-  const isHead = name === 'HEAD' || name.startsWith('HEAD ->')
-  const isTag = name.startsWith('tag:')
-  const label = name.replace(/^tag:\s*/, '').replace(/^HEAD ->\s*/, '')
+// --- ref pills (left column) ------------------------------------------------
+
+type RefKind = 'head' | 'local' | 'remote' | 'tag'
+interface RefInfo {
+  kind: RefKind
+  label: string
+  /** True for the checked-out branch / detached HEAD. */
+  current: boolean
+}
+
+function classifyRef(raw: string, remotePrefixes: Set<string>): RefInfo {
+  if (raw === 'HEAD') return { kind: 'head', label: 'HEAD', current: true }
+  if (raw.startsWith('HEAD -> ')) return { kind: 'local', label: raw.slice(8), current: true }
+  if (raw.startsWith('tag: ')) return { kind: 'tag', label: raw.slice(5), current: false }
+  const prefix = raw.split('/')[0]
+  if (raw.includes('/') && remotePrefixes.has(prefix)) {
+    return { kind: 'remote', label: raw, current: false }
+  }
+  return { kind: 'local', label: raw, current: false }
+}
+
+function refsForCommit(commit: Commit, remotePrefixes: Set<string>): RefInfo[] {
+  return commit.refs
+    .map((r) => classifyRef(r, remotePrefixes))
+    // Drop the symbolic "origin/HEAD" pointer — it just mirrors the default branch.
+    .filter((r) => !(r.kind === 'remote' && r.label.endsWith('/HEAD')))
+    // Keep the current branch rightmost (nearest the graph) so it survives clipping.
+    .sort((a, b) => Number(a.current) - Number(b.current))
+}
+
+function RefPill({ info, lane }: { info: RefInfo; lane: number }): React.JSX.Element {
+  const color = laneColor(lane)
+  const Icon = info.kind === 'tag' ? Tag : info.kind === 'remote' ? Cloud : GitBranch
   return (
     <span
-      className={`rounded-[var(--radius-card)] px-1.5 py-0.5 text-[10px] font-medium ${
-        isHead
-          ? 'bg-accent/15 text-accent'
-          : isTag
-            ? 'bg-conflict/15 text-conflict'
-            : 'bg-surface-2 text-fg-muted'
-      }`}
+      title={info.label}
+      className="flex max-w-[150px] shrink-0 items-center gap-1 rounded-[var(--radius-card)] border px-1.5 py-[1px] text-[10.5px] font-medium leading-none"
+      style={{
+        color,
+        borderColor: color,
+        backgroundColor: `color-mix(in srgb, ${color} ${info.current ? 22 : 14}%, transparent)`
+      }}
     >
-      {label}
+      {info.current && <Check size={10} strokeWidth={2.5} className="shrink-0" />}
+      <Icon size={10} strokeWidth={2} className="shrink-0" />
+      <span className="truncate">{info.label}</span>
     </span>
   )
 }
 
-function CommitRow({
+// --- relative time ----------------------------------------------------------
+
+function formatRel(rtf: Intl.RelativeTimeFormat, iso: string): string {
+  const sec = Math.round((Date.now() - new Date(iso).getTime()) / 1000)
+  const a = Math.abs(sec)
+  if (a < 60) return rtf.format(-sec, 'second')
+  const min = Math.round(sec / 60)
+  if (Math.abs(min) < 60) return rtf.format(-min, 'minute')
+  const hr = Math.round(min / 60)
+  if (Math.abs(hr) < 24) return rtf.format(-hr, 'hour')
+  const day = Math.round(hr / 24)
+  if (Math.abs(day) < 30) return rtf.format(-day, 'day')
+  const mon = Math.round(day / 30)
+  if (Math.abs(mon) < 12) return rtf.format(-mon, 'month')
+  return rtf.format(-Math.round(day / 365), 'year')
+}
+
+// --- search results row (flat list, no graph) -------------------------------
+
+function SearchRow({
   commit,
   selected,
   topBorder,
@@ -64,13 +117,6 @@ function CommitRow({
         selected ? 'bg-surface-2' : ''
       } ${topBorder ? 'border-t border-border/30' : ''}`}
     >
-      {commit.refs.length > 0 && (
-        <span className="flex shrink-0 gap-1">
-          {commit.refs.map((r) => (
-            <RefBadge key={r} name={r} />
-          ))}
-        </span>
-      )}
       <span className="truncate text-fg">{commit.summary}</span>
       <span className="ms-auto shrink-0 truncate text-fg-subtle">{commit.author.name}</span>
       <span className="shrink-0 font-mono text-[11px] text-fg-subtle">{commit.shortSha}</span>
@@ -78,63 +124,12 @@ function CommitRow({
   )
 }
 
-function GraphColumn({
-  commits,
-  width
-}: {
-  commits: Commit[]
-  width: number
-}): React.JSX.Element {
-  const layout = useMemo(() => computeLayout(commits), [commits])
-  const x = (lane: number): number => LEFT_PAD + lane * LANE_W + LANE_W / 2
-  const y = (row: number): number => row * ROW_H + ROW_H / 2
-
-  return (
-    <svg
-      width={width}
-      height={commits.length * ROW_H}
-      className="shrink-0"
-      style={{ pointerEvents: 'none' }}
-    >
-      {layout.edges.map((e, i) => {
-        const x1 = x(e.fromLane)
-        const y1 = y(e.fromRow)
-        const x2 = x(e.toLane)
-        const y2 = y(e.toRow)
-        const midY = (y1 + y2) / 2
-        const d =
-          x1 === x2
-            ? `M ${x1} ${y1} L ${x2} ${y2}`
-            : `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`
-        return (
-          <path
-            key={i}
-            d={d}
-            fill="none"
-            stroke={laneColor(e.toLane)}
-            strokeWidth={1.6}
-            strokeLinecap="round"
-          />
-        )
-      })}
-      {layout.nodes.map((n) => (
-        <circle
-          key={n.sha}
-          cx={x(n.lane)}
-          cy={y(n.row)}
-          r={DOT_R}
-          fill="var(--color-bg)"
-          stroke={laneColor(n.lane)}
-          strokeWidth={2.2}
-        />
-      ))}
-    </svg>
-  )
-}
+// --- main view --------------------------------------------------------------
 
 export function GraphView({ repoPath }: { repoPath: string }): React.JSX.Element {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { data: commits, isLoading, error } = useLog(repoPath, { limit: 300 })
+  const { data: branches } = useBranches(repoPath)
   const selectedSha = useRepoStore((s) => s.selectedSha)
   const selectCommit = useRepoStore((s) => s.selectCommit)
   const cherryPick = useCherryPick(repoPath)
@@ -144,6 +139,25 @@ export function GraphView({ repoPath }: { repoPath: string }): React.JSX.Element
   const searchActive = searchQuery.trim().length > 0
   const search = useSearch(repoPath, searchQuery)
   const [menu, setMenu] = useState<MenuState | null>(null)
+
+  const rtf = useMemo(
+    () => new Intl.RelativeTimeFormat(i18n.language, { numeric: 'auto', style: 'short' }),
+    [i18n.language]
+  )
+
+  // Remote names (e.g. "origin") so a ref like "origin/main" reads as remote
+  // rather than a local branch that merely contains a slash ("feature/x").
+  const remotePrefixes = useMemo(() => {
+    const set = new Set<string>()
+    for (const b of branches ?? []) if (b.kind === 'remote') set.add(b.name.split('/')[0])
+    return set
+  }, [branches])
+
+  const layout = useMemo(() => (commits ? computeLayout(commits) : null), [commits])
+  const headSha = useMemo(
+    () => commits?.find((c) => c.refs.some((r) => r === 'HEAD' || r.startsWith('HEAD ->')))?.sha,
+    [commits]
+  )
 
   const commitMenu = (e: React.MouseEvent, commit: Commit): void => {
     e.preventDefault()
@@ -161,12 +175,6 @@ export function GraphView({ repoPath }: { repoPath: string }): React.JSX.Element
     setMenu({ x: e.clientX, y: e.clientY, items })
   }
 
-  const graphWidth = useMemo(() => {
-    if (!commits) return LEFT_PAD * 2
-    const layout = computeLayout(commits)
-    return LEFT_PAD * 2 + layout.laneCount * LANE_W
-  }, [commits])
-
   // --- search results mode ---
   if (searchActive) {
     const results = search.data
@@ -183,7 +191,7 @@ export function GraphView({ repoPath }: { repoPath: string }): React.JSX.Element
             <Centered text={t('search.noResults', { query: searchQuery })} />
           )}
           {results?.map((c, i) => (
-            <CommitRow
+            <SearchRow
               key={c.sha}
               commit={c}
               selected={selectedSha === c.sha}
@@ -199,15 +207,15 @@ export function GraphView({ repoPath }: { repoPath: string }): React.JSX.Element
   }
 
   // --- graph mode ---
-  if (isLoading) {
-    return <Centered text={t('graph.loading')} />
-  }
-  if (error) {
-    return <Centered text={(error as Error).message} tone="danger" />
-  }
-  if (!commits || commits.length === 0) {
-    return <Centered text={t('graph.empty')} />
-  }
+  if (isLoading) return <Centered text={t('graph.loading')} />
+  if (error) return <Centered text={(error as Error).message} tone="danger" />
+  if (!commits || commits.length === 0 || !layout) return <Centered text={t('graph.empty')} />
+
+  const graphWidth = LANE_PAD * 2 + layout.laneCount * LANE_W
+  const totalHeight = commits.length * ROW_H
+  const x = (lane: number): number => LANE_PAD + lane * LANE_W + LANE_W / 2
+  const y = (row: number): number => row * ROW_H + ROW_H / 2
+  const laneOf = new Map(layout.nodes.map((n) => [n.sha, n.lane]))
 
   return (
     <div className="flex h-full flex-col">
@@ -215,22 +223,99 @@ export function GraphView({ repoPath }: { repoPath: string }): React.JSX.Element
         {t('graph.title')}
       </div>
       <div className="relative min-h-0 flex-1 overflow-auto">
-        <div className="flex" style={{ minHeight: commits.length * ROW_H }}>
-          <GraphColumn commits={commits} width={graphWidth} />
-          {/* min-width keeps the commit rows from collapsing when the graph
-              column is wide (deep/branchy history); the panel scrolls instead. */}
-          <div className="min-w-[340px] flex-1">
-            {commits.map((c, row) => (
-              <CommitRow
+        <div
+          className="relative"
+          style={{ height: totalHeight, minWidth: REFS_W + graphWidth + 320 }}
+        >
+          {/* Rows first so their hover/selection backgrounds sit beneath the
+              graph overlay; the graph is then always drawn crisply on top. */}
+          {commits.map((c) => {
+            const refs = refsForCommit(c, remotePrefixes)
+            const selected = selectedSha === c.sha
+            return (
+              <button
                 key={c.sha}
-                commit={c}
-                selected={selectedSha === c.sha}
-                topBorder={row > 0}
-                onSelect={() => selectCommit(c.sha)}
+                type="button"
+                onClick={() => selectCommit(c.sha)}
                 onContextMenu={(e) => commitMenu(e, c)}
-              />
-            ))}
-          </div>
+                style={{ height: ROW_H }}
+                className={`flex w-full items-center text-start hover:bg-surface-2 ${
+                  selected ? 'bg-surface-2' : ''
+                }`}
+              >
+                <div
+                  className="flex shrink-0 items-center justify-end gap-1 overflow-hidden pe-2 ps-3"
+                  style={{ width: REFS_W }}
+                >
+                  {refs.map((info) => (
+                    <RefPill key={info.kind + info.label} info={info} lane={laneOf.get(c.sha) ?? 0} />
+                  ))}
+                </div>
+                {/* Spacer the graph overlay draws over. */}
+                <div className="shrink-0" style={{ width: graphWidth }} />
+                <div className="flex min-w-0 flex-1 items-center gap-2 pe-4 ps-1 text-xs">
+                  <span className="truncate text-fg">{c.summary}</span>
+                  <span className="ms-auto shrink-0 truncate text-fg-subtle">{c.author.name}</span>
+                  <span className="shrink-0 text-fg-subtle">{formatRel(rtf, c.author.date)}</span>
+                  <span className="shrink-0 font-mono text-[11px] text-fg-subtle">{c.shortSha}</span>
+                </div>
+              </button>
+            )
+          })}
+
+          {/* Graph overlay: thin lane lines + circular nodes, drawn over the
+              row spacer. pointer-events:none so clicks fall through to rows. */}
+          <svg
+            className="pointer-events-none absolute top-0"
+            style={{ left: REFS_W }}
+            width={graphWidth}
+            height={totalHeight}
+          >
+            {layout.edges.map((e, i) => {
+              const x1 = x(e.fromLane)
+              const y1 = y(e.fromRow)
+              const x2 = x(e.toLane)
+              const y2 = y(e.toRow)
+              const midY = (y1 + y2) / 2
+              const d =
+                x1 === x2
+                  ? `M ${x1} ${y1} L ${x2} ${y2}`
+                  : `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`
+              return (
+                <path
+                  key={i}
+                  d={d}
+                  fill="none"
+                  stroke={laneColor(e.toLane)}
+                  strokeWidth={1.5}
+                  strokeLinecap="round"
+                />
+              )
+            })}
+            {layout.nodes.map((n) => {
+              const cx = x(n.lane)
+              const cy = y(n.row)
+              const isHead = n.sha === headSha
+              const isSelected = n.sha === selectedSha
+              return (
+                <g key={n.sha}>
+                  {(isHead || isSelected) && (
+                    <circle
+                      cx={cx}
+                      cy={cy}
+                      r={DOT_OUTER + 2}
+                      fill="none"
+                      stroke="var(--color-accent)"
+                      strokeWidth={isSelected ? 2 : 1.5}
+                      opacity={isSelected ? 1 : 0.85}
+                    />
+                  )}
+                  <circle cx={cx} cy={cy} r={DOT_OUTER} fill="var(--color-bg)" />
+                  <circle cx={cx} cy={cy} r={DOT_INNER} fill={laneColor(n.lane)} />
+                </g>
+              )
+            })}
+          </svg>
         </div>
       </div>
       <ContextMenu state={menu} onClose={() => setMenu(null)} />
@@ -238,13 +323,7 @@ export function GraphView({ repoPath }: { repoPath: string }): React.JSX.Element
   )
 }
 
-function Centered({
-  text,
-  tone
-}: {
-  text: string
-  tone?: 'danger'
-}): React.JSX.Element {
+function Centered({ text, tone }: { text: string; tone?: 'danger' }): React.JSX.Element {
   return (
     <div className="flex h-full items-center justify-center p-6 text-center text-xs">
       <span className={tone === 'danger' ? 'text-danger' : 'text-fg-subtle'}>{text}</span>
