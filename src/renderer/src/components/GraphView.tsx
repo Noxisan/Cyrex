@@ -139,21 +139,26 @@ export function GraphView({ repoPath }: { repoPath: string }): React.JSX.Element
   const selectCommit = useRepoStore((s) => s.selectCommit)
   const cherryPick = useCherryPick(repoPath)
   const revert = useRevert(repoPath)
+  const openRebase = useRepoStore((s) => s.openRebase)
   const searchQuery = useRepoStore((s) => s.searchQuery)
   const searchActive = searchQuery.trim().length > 0
   const search = useSearch(repoPath, searchQuery)
   const [menu, setMenu] = useState<MenuState | null>(null)
 
-  const commitMenu = (e: React.MouseEvent, sha: string): void => {
+  const commitMenu = (e: React.MouseEvent, commit: Commit): void => {
     e.preventDefault()
-    setMenu({
-      x: e.clientX,
-      y: e.clientY,
-      items: [
-        { label: t('commit.cherryPick'), onClick: () => cherryPick.mutate(sha) },
-        { label: t('commit.revert'), onClick: () => revert.mutate(sha) }
-      ]
-    })
+    const items = [
+      { label: t('commit.cherryPick'), onClick: () => cherryPick.mutate(commit.sha) },
+      { label: t('commit.revert'), onClick: () => revert.mutate(commit.sha) }
+    ]
+    // Rebase needs a parent to use as the base; root commits have none.
+    if (commit.parents.length > 0) {
+      items.push({
+        label: t('commit.rebaseFromHere'),
+        onClick: () => openRebase(commit.parents[0])
+      })
+    }
+    setMenu({ x: e.clientX, y: e.clientY, items })
   }
 
   const graphWidth = useMemo(() => {
@@ -184,7 +189,7 @@ export function GraphView({ repoPath }: { repoPath: string }): React.JSX.Element
               selected={selectedSha === c.sha}
               topBorder={i > 0}
               onSelect={() => selectCommit(c.sha)}
-              onContextMenu={(e) => commitMenu(e, c.sha)}
+              onContextMenu={(e) => commitMenu(e, c)}
             />
           ))}
         </div>
@@ -222,7 +227,7 @@ export function GraphView({ repoPath }: { repoPath: string }): React.JSX.Element
                 selected={selectedSha === c.sha}
                 topBorder={row > 0}
                 onSelect={() => selectCommit(c.sha)}
-                onContextMenu={(e) => commitMenu(e, c.sha)}
+                onContextMenu={(e) => commitMenu(e, c)}
               />
             ))}
           </div>

@@ -41,6 +41,12 @@ export interface GitRunOptions {
   throwOnError?: boolean
   /** Text written to the process's stdin (e.g. a patch for `git apply`). */
   input?: string
+  /**
+   * Extra environment variables, merged over the stable defaults. Used to drive
+   * non-interactive flows that need a custom editor — e.g. installing a generated
+   * todo list for `rebase -i` via GIT_SEQUENCE_EDITOR.
+   */
+  env?: Record<string, string>
 }
 
 export interface GitRunResult {
@@ -54,7 +60,7 @@ export interface GitRunResult {
  * walks, big diffs) prefer a streaming variant — added as the engine grows.
  */
 export function runGit(args: string[], opts: GitRunOptions = {}): Promise<GitRunResult> {
-  const { cwd, timeoutMs = 30_000, throwOnError = true, input } = opts
+  const { cwd, timeoutMs = 30_000, throwOnError = true, input, env } = opts
 
   return new Promise((resolve, reject) => {
     const child = spawn('git', args, {
@@ -67,7 +73,9 @@ export function runGit(args: string[], opts: GitRunOptions = {}): Promise<GitRun
         GIT_OPTIONAL_LOCKS: '0',
         // A GUI never wants an interactive editor; accept default messages.
         GIT_EDITOR: 'true',
-        GIT_SEQUENCE_EDITOR: 'true'
+        GIT_SEQUENCE_EDITOR: 'true',
+        // Per-call overrides (e.g. a generated rebase-todo sequence editor).
+        ...env
       },
       windowsHide: true
     })

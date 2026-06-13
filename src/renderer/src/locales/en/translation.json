@@ -58,7 +58,30 @@
   },
   "commit": {
     "cherryPick": "Cherry-pick onto current branch",
-    "revert": "Revert this commit"
+    "revert": "Revert this commit",
+    "rebaseFromHere": "Interactive rebase from here"
+  },
+  "rebase": {
+    "title": "Interactive Rebase",
+    "subtitle_one": "Replaying {{count}} commit onto {{base}}",
+    "subtitle_other": "Replaying {{count}} commits onto {{base}}",
+    "empty": "No commits to rebase from this point.",
+    "warning": "Rebasing rewrites commit history. The original commits remain recoverable through Undo (reflog).",
+    "invalidSquash": "The first kept commit can't be squashed or fixed up — there's nothing above it to fold into.",
+    "start": "Start rebase",
+    "startDropAll": "Drop all and rebase",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "paused": "Rebase paused — resolve, then continue from the banner.",
+    "done": "Rebase complete.",
+    "action": {
+      "pick": "pick",
+      "reword": "reword",
+      "edit": "edit",
+      "squash": "squash",
+      "fixup": "fixup",
+      "drop": "drop"
+    }
   },
   "inspector": {
     "open": "File history and blame",

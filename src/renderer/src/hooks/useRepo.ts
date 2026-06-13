@@ -6,7 +6,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import type { EngineResult, LogOptions } from '@shared/types'
+import type { EngineResult, LogOptions, RebaseTodoItem } from '@shared/types'
 import { useToastStore } from '../store/toastStore'
 
 function unwrap<T>(res: EngineResult<T>): T {
@@ -88,6 +88,20 @@ export function useReflog(path: string | null, enabled = true) {
 export function useResetTo(path: string) {
   return useRepoMutation((v: { sha: string; mode: 'soft' | 'mixed' | 'hard' }) =>
     window.cyrex.resetTo(path, v.sha, v.mode)
+  )
+}
+
+export function useRebaseCommits(path: string | null, base: string | null) {
+  return useQuery({
+    queryKey: ['rebaseCommits', path, base],
+    enabled: !!path && !!base,
+    queryFn: async () => unwrap(await window.cyrex.rebaseCommits(path!, base!))
+  })
+}
+
+export function useInteractiveRebase(path: string) {
+  return useRepoMutation((v: { base: string; items: RebaseTodoItem[] }) =>
+    window.cyrex.interactiveRebase(path, v.base, v.items)
   )
 }
 

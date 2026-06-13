@@ -30,6 +30,8 @@ interface RepoState {
   searchQuery: string
   /** Whether the reflog (undo / recovery) overlay is open. */
   reflogOpen: boolean
+  /** Base commit sha for the interactive-rebase planner; null when closed. */
+  rebaseBase: string | null
   theme: Theme
 
   addRepo: (repo: RepoRef) => void
@@ -42,6 +44,8 @@ interface RepoState {
   setSearchQuery: (query: string) => void
   openReflog: () => void
   closeReflog: () => void
+  openRebase: (base: string) => void
+  closeRebase: () => void
   setTheme: (theme: Theme) => void
   toggleTheme: () => void
 }
@@ -78,6 +82,7 @@ export const useRepoStore = create<RepoState>((set, get) => ({
   inspectorTab: 'history',
   searchQuery: '',
   reflogOpen: false,
+  rebaseBase: null,
   theme: initialTheme(),
 
   addRepo: (repo) =>
@@ -94,7 +99,8 @@ export const useRepoStore = create<RepoState>((set, get) => ({
       selectedFile: null,
       inspectorFile: null,
       searchQuery: '',
-      reflogOpen: false
+      reflogOpen: false,
+      rebaseBase: null
     }),
   selectCommit: (sha) => set({ selectedSha: sha }),
   setViewMode: (mode) => set({ viewMode: mode }),
@@ -104,6 +110,8 @@ export const useRepoStore = create<RepoState>((set, get) => ({
   setSearchQuery: (query) => set({ searchQuery: query }),
   openReflog: () => set({ reflogOpen: true }),
   closeReflog: () => set({ reflogOpen: false }),
+  openRebase: (base) => set({ rebaseBase: base }),
+  closeRebase: () => set({ rebaseBase: null }),
 
   setTheme: (theme) => {
     localStorage.setItem(THEME_KEY, theme)
