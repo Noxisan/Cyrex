@@ -11,6 +11,7 @@ import { Toasts } from './components/Toasts'
 import { OperationBanner } from './components/OperationBanner'
 import { FileInspector } from './components/FileInspector'
 import { ReflogPanel } from './components/ReflogPanel'
+import { RebaseDialog } from './components/RebaseDialog'
 
 export function App(): React.JSX.Element {
   const activePath = useRepoStore((s) => s.activePath)
@@ -45,6 +46,7 @@ export function App(): React.JSX.Element {
       <StatusBar />
       <FileInspector />
       <ReflogPanel />
+      <RebaseDialog />
       <Toasts />
     </div>
   )

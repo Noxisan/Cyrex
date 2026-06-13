@@ -23,9 +23,11 @@ import {
   deleteBranchSchema,
   discardSchema,
   fileOpSchema,
+  interactiveRebaseSchema,
   logSchema,
   mergeSchema,
   pushSchema,
+  rebaseCommitsSchema,
   renameBranchSchema,
   repoPathSchema,
   resetSchema,
@@ -299,6 +301,18 @@ export function registerIpcHandlers(): void {
       await engine.abortOperation(req.path)
       return null
     })
+  )
+
+  ipcMain.handle(
+    IpcChannels.RepoRebaseCommits,
+    wrap(rebaseCommitsSchema, (req) => engine.rebaseCommits(req.path, req.base))
+  )
+
+  ipcMain.handle(
+    IpcChannels.RepoInteractiveRebase,
+    wrap(interactiveRebaseSchema, (req) =>
+      engine.interactiveRebase(req.path, req.base, req.items)
+    )
   )
 
   ipcMain.handle(

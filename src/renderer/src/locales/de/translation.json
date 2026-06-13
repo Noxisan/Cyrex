@@ -58,7 +58,30 @@
   },
   "commit": {
     "cherryPick": "Auf aktuellen Branch cherry-picken",
-    "revert": "Diesen Commit rückgängig machen"
+    "revert": "Diesen Commit rückgängig machen",
+    "rebaseFromHere": "Interaktives Rebase ab hier"
+  },
+  "rebase": {
+    "title": "Interaktives Rebase",
+    "subtitle_one": "{{count}} Commit wird auf {{base}} neu aufgespielt",
+    "subtitle_other": "{{count}} Commits werden auf {{base}} neu aufgespielt",
+    "empty": "Ab diesem Punkt gibt es keine Commits zum Rebasen.",
+    "warning": "Rebase schreibt die Commit-Historie um. Die ursprünglichen Commits bleiben über Rückgängig (Reflog) wiederherstellbar.",
+    "invalidSquash": "Der erste beibehaltene Commit kann nicht gesquasht oder gefixupt werden — darüber liegt nichts, in das er einfließen könnte.",
+    "start": "Rebase starten",
+    "startDropAll": "Alle verwerfen und rebasen",
+    "moveUp": "Nach oben",
+    "moveDown": "Nach unten",
+    "paused": "Rebase pausiert — auflösen und über das Banner fortsetzen.",
+    "done": "Rebase abgeschlossen.",
+    "action": {
+      "pick": "pick",
+      "reword": "reword",
+      "edit": "edit",
+      "squash": "squash",
+      "fixup": "fixup",
+      "drop": "drop"
+    }
   },
   "inspector": {
     "open": "Dateiverlauf und Blame",

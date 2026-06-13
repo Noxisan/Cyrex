@@ -8,7 +8,7 @@
  */
 
 import { basename, join, resolve } from 'node:path'
-import { readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import type {
   BlameLine,
@@ -20,6 +20,8 @@ import type {
   FileStatus,
   FileStatusCode,
   LogOptions,
+  RebaseResult,
+  RebaseTodoItem,
   ReflogEntry,
   RepoOperation,
   RepoRef,
@@ -27,7 +29,7 @@ import type {
   Stash,
   Tag
 } from '@shared/types'
-import { gitVersion, isGitRepo, runGit } from './cli'
+import { gitVersion, isGitRepo, runGit, scrubSecrets } from './cli'
 import { parseUnifiedDiff } from './diff'
 import { parseConflictText } from './conflict'
 import { buildPatch } from './patch'
@@ -816,6 +818,91 @@ export async function resolveConflict(
 ): Promise<void> {
   await writeFile(join(repoPath, file), content)
   await runGit(['add', '--', file], { cwd: repoPath })
+}
+
+// --- interactive rebase -----------------------------------------------------
+//
+// Cyrex drives `git rebase -i` non-interactively: it computes the commit list,
+// the user plans actions in the UI, and we install a generated todo via
+// GIT_SEQUENCE_EDITOR. `reword` is a pick + a non-interactive `--amend`, so no
+// message editor is ever spawned; `squash` accepts git's default combined
+// message. History rewrites are recoverable through the reflog (the Undo
+// surface). The renderer never sees any of this plumbing.
+
+/** Absolute path to the repository's git directory. */
+async function gitDir(repoPath: string): Promise<string> {
+  const { stdout } = await runGit(['rev-parse', '--git-dir'], { cwd: repoPath })
+  return resolve(repoPath, stdout.trim())
+}
+
+/**
+ * The commits in base..HEAD that an interactive rebase can act on, oldest first
+ * — the order a rebase todo presents them.
+ */
+export async function rebaseCommits(repoPath: string, base: string): Promise<Commit[]> {
+  const { stdout } = await runGit(
+    ['log', '--reverse', '--topo-order', `--format=${LOG_FORMAT}`, `${base}..HEAD`],
+    { cwd: repoPath }
+  )
+  return parseCommits(stdout)
+}
+
+/**
+ * Start an interactive rebase onto `base` following the planned `items`. Returns
+ * whether it completed or paused (an `edit` stop or a conflict leaves the rebase
+ * in progress for the operation banner to continue/abort).
+ */
+export async function interactiveRebase(
+  repoPath: string,
+  base: string,
+  items: RebaseTodoItem[]
+): Promise<RebaseResult> {
+  if (items.length === 0) throw new Error('No commits to rebase.')
+
+  const scratch = join(await gitDir(repoPath), 'cyrex-rebase')
+  await rm(scratch, { recursive: true, force: true })
+  await mkdir(scratch, { recursive: true })
+
+  const lines: string[] = []
+  let rewordN = 0
+  for (const it of items) {
+    if (it.action === 'drop') {
+      lines.push(`drop ${it.sha}`)
+    } else if (it.action === 'reword') {
+      // Apply the commit, then rewrite its message non-interactively.
+      const msgPath = join(scratch, `msg-${rewordN++}`)
+      await writeFile(msgPath, (it.message ?? '').replace(/\s+$/, '') + '\n')
+      lines.push(`pick ${it.sha}`)
+      lines.push(`exec git commit --amend -F '${msgPath}'`)
+    } else {
+      lines.push(`${it.action} ${it.sha}`)
+    }
+  }
+  const todoPath = join(scratch, 'todo')
+  await writeFile(todoPath, lines.join('\n') + '\n')
+
+  // git runs the sequence editor through the shell with the real todo path as an
+  // argument, so `cp '<our-todo>'` becomes `cp '<our-todo>' <real-todo>` — i.e.
+  // our plan overwrites git's generated todo. (POSIX; Windows is a follow-up.)
+  const res = await runGit(['rebase', '-i', '--autostash', base], {
+    cwd: repoPath,
+    throwOnError: false,
+    timeoutMs: 120_000,
+    env: { GIT_SEQUENCE_EDITOR: `cp '${todoPath}'` }
+  })
+
+  // An `edit` stop exits 0 but leaves the rebase in progress, while a conflict
+  // exits non-zero — so the authoritative "did it pause?" signal is whether a
+  // rebase is still in progress, not the exit code. Keep the scratch dir while
+  // paused: pending reword execs still reference their message files.
+  if ((await detectOperation(repoPath)) === 'rebase') {
+    return { completed: false, stopped: true }
+  }
+
+  await rm(scratch, { recursive: true, force: true })
+  if (res.code === 0) return { completed: true, stopped: false }
+  // Anything else (refuses merge commits, dirty tree, …) is a real failure.
+  throw new Error(scrubSecrets(res.stderr.trim() || `rebase failed (code ${res.code})`))
 }
 
 export type ConflictSide = 'ours' | 'theirs'

@@ -144,6 +144,31 @@ export const resolveSideSchema = z.object({
   side: z.enum(['ours', 'theirs'])
 })
 
+// A concrete object id (commit sha). Stricter than refName: hex only, so a
+// generated rebase todo can never smuggle a flag or shell metacharacter.
+const objectId = z
+  .string()
+  .min(4)
+  .max(64)
+  .regex(/^[0-9a-f]+$/i, 'invalid object id')
+
+export const rebaseCommitsSchema = z.object({ path: z.string().min(1), base: refName })
+
+export const interactiveRebaseSchema = z.object({
+  path: z.string().min(1),
+  base: refName,
+  items: z
+    .array(
+      z.object({
+        sha: objectId,
+        action: z.enum(['pick', 'reword', 'squash', 'fixup', 'edit', 'drop']),
+        message: z.string().max(20_000).optional()
+      })
+    )
+    .min(1)
+    .max(2000)
+})
+
 export const mergeSchema = z.object({ path: z.string().min(1), ref: refName })
 export const cherryPickSchema = z.object({ path: z.string().min(1), sha: refName })
 export const revertSchema = z.object({ path: z.string().min(1), sha: refName })

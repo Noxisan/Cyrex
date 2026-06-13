@@ -7,6 +7,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { IpcChannels } from '@shared/ipc'
 import type { IpcApi } from '@shared/ipc'
+import type { RebaseTodoItem } from '@shared/types'
 
 type Req<C extends keyof IpcApi> = IpcApi[C]['request']
 type Res<C extends keyof IpcApi> = IpcApi[C]['response']
@@ -64,6 +65,10 @@ export const cyrexApi = {
   revert: (path: string, sha: string) => invoke(IpcChannels.RepoRevert, { path, sha }),
   continueOperation: (path: string) => invoke(IpcChannels.RepoContinueOp, { path }),
   abortOperation: (path: string) => invoke(IpcChannels.RepoAbortOp, { path }),
+  rebaseCommits: (path: string, base: string) =>
+    invoke(IpcChannels.RepoRebaseCommits, { path, base }),
+  interactiveRebase: (path: string, base: string, items: RebaseTodoItem[]) =>
+    invoke(IpcChannels.RepoInteractiveRebase, { path, base, items }),
   readConflict: (path: string, file: string) =>
     invoke(IpcChannels.RepoReadConflict, { path, file }),
   resolveConflict: (path: string, file: string, content: string) =>

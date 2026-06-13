@@ -199,6 +199,30 @@ export interface ReflogEntry {
   author: string
 }
 
+// --- interactive rebase -----------------------------------------------------
+
+/** What to do with a commit during an interactive rebase. */
+export type RebaseAction = 'pick' | 'reword' | 'squash' | 'fixup' | 'edit' | 'drop'
+
+/** One line of a planned interactive-rebase todo. */
+export interface RebaseTodoItem {
+  sha: string
+  action: RebaseAction
+  /** New commit message — only meaningful (and required) for `reword`. */
+  message?: string
+}
+
+/** Outcome of starting an interactive rebase. */
+export interface RebaseResult {
+  /** True when the rebase ran to completion without stopping. */
+  completed: boolean
+  /**
+   * True when the rebase paused mid-flight (an `edit` stop, or a conflict) and
+   * is now in progress — the operation banner takes over with continue/abort.
+   */
+  stopped: boolean
+}
+
 export interface BlameLine {
   /** 1-based line number in the final file. */
   line: number

@@ -14,6 +14,8 @@ import type {
   ConflictFile,
   EngineResult,
   LogOptions,
+  RebaseResult,
+  RebaseTodoItem,
   ReflogEntry,
   RepoRef,
   RepoStatus,
@@ -66,6 +68,10 @@ export const IpcChannels = {
   RepoRevert: 'repo:revert',
   RepoContinueOp: 'repo:continueOperation',
   RepoAbortOp: 'repo:abortOperation',
+  /** Interactive rebase: list the editable commits, then run the planned todo. */
+  RepoRebaseCommits: 'repo:rebaseCommits',
+  /** DESTRUCTIVE — rewrites history (recoverable via the reflog / Undo). */
+  RepoInteractiveRebase: 'repo:interactiveRebase',
   /** Conflict resolution: read a conflicted file's sides, write the resolution. */
   RepoReadConflict: 'repo:readConflict',
   RepoResolveConflict: 'repo:resolveConflict',
@@ -226,6 +232,14 @@ export interface IpcApi {
   [IpcChannels.RepoAbortOp]: {
     request: { path: string }
     response: EngineResult<null>
+  }
+  [IpcChannels.RepoRebaseCommits]: {
+    request: { path: string; base: string }
+    response: EngineResult<Commit[]>
+  }
+  [IpcChannels.RepoInteractiveRebase]: {
+    request: { path: string; base: string; items: RebaseTodoItem[] }
+    response: EngineResult<RebaseResult>
   }
   [IpcChannels.RepoReadConflict]: {
     request: { path: string; file: string }
