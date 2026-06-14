@@ -13,11 +13,16 @@ import type {
   CommitContext,
   CommitDiff,
   ConflictFile,
+  DeviceLoginStart,
+  DeviceLoginStatus,
   EngineResult,
+  HostingAccount,
+  HostingProviderId,
   LogOptions,
   RebaseResult,
   RebaseTodoItem,
   ReflogEntry,
+  RemoteRepo,
   RepoRef,
   RepoStatus,
   Stash,
@@ -94,7 +99,30 @@ export const IpcChannels = {
   /** DESTRUCTIVE when mode is 'hard' — move HEAD to a commit (reset). */
   RepoReset: 'repo:reset',
   /** Returns which engine backend is active (cli | nodegit). */
-  EngineInfo: 'engine:info'
+  EngineInfo: 'engine:info',
+  /** Open a directory picker, returning the chosen path (or null). */
+  PickDirectory: 'dialog:pickDirectory',
+  // --- Remote hosting (GitHub / GitLab / Bitbucket). Tokens never cross IPC. ---
+  /** Wired providers and whether each supports device-flow login. */
+  HostingProviders: 'hosting:providers',
+  /** Connected accounts (metadata only). */
+  HostingListAccounts: 'hosting:listAccounts',
+  /** Start OAuth device-flow login (shows a code, opens the browser). */
+  HostingStartLogin: 'hosting:startLogin',
+  /** Poll a device-flow login once; saves the account on success. */
+  HostingPollLogin: 'hosting:pollLogin',
+  /** Connect by pasting a personal access token. */
+  HostingConnectToken: 'hosting:connectToken',
+  /** Forget an account and its token. */
+  HostingDisconnect: 'hosting:disconnect',
+  /** List an account's repositories (metadata only). */
+  HostingListRepos: 'hosting:listRepos',
+  /** Create a repository on the provider. */
+  HostingCreateRepo: 'hosting:createRepo',
+  /** Clone a repo; the account's token is resolved in-process, not via IPC. */
+  RepoClone: 'repo:clone',
+  /** Point a repo's remote at a URL (link to a created remote). */
+  RepoSetRemote: 'repo:setRemote'
 } as const
 
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels]
@@ -310,5 +338,49 @@ export interface IpcApi {
   [IpcChannels.EngineInfo]: {
     request: void
     response: EngineResult<EngineInfo>
+  }
+  [IpcChannels.PickDirectory]: {
+    request: void
+    response: EngineResult<string | null>
+  }
+  [IpcChannels.HostingProviders]: {
+    request: void
+    response: EngineResult<{ id: HostingProviderId; deviceFlow: boolean }[]>
+  }
+  [IpcChannels.HostingListAccounts]: {
+    request: void
+    response: EngineResult<HostingAccount[]>
+  }
+  [IpcChannels.HostingStartLogin]: {
+    request: { provider: HostingProviderId }
+    response: EngineResult<DeviceLoginStart>
+  }
+  [IpcChannels.HostingPollLogin]: {
+    request: { handle: string }
+    response: EngineResult<DeviceLoginStatus>
+  }
+  [IpcChannels.HostingConnectToken]: {
+    request: { provider: HostingProviderId; token: string }
+    response: EngineResult<HostingAccount>
+  }
+  [IpcChannels.HostingDisconnect]: {
+    request: { id: string }
+    response: EngineResult<null>
+  }
+  [IpcChannels.HostingListRepos]: {
+    request: { accountId: string }
+    response: EngineResult<RemoteRepo[]>
+  }
+  [IpcChannels.HostingCreateRepo]: {
+    request: { accountId: string; name: string; description?: string; private: boolean }
+    response: EngineResult<RemoteRepo>
+  }
+  [IpcChannels.RepoClone]: {
+    request: { cloneUrl: string; parentDir: string; name: string; accountId?: string }
+    response: EngineResult<RepoRef>
+  }
+  [IpcChannels.RepoSetRemote]: {
+    request: { path: string; url: string; name?: string }
+    response: EngineResult<null>
   }
 }
