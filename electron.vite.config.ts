@@ -1,7 +1,12 @@
 import { resolve } from 'node:path'
+import { readFileSync } from 'node:fs'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+
+// App version, read from package.json and inlined into the renderer at build
+// time (see __APP_VERSION__ in vite-env.d.ts) so the UI can show it without IPC.
+const appVersion = JSON.parse(readFileSync(resolve('package.json'), 'utf-8')).version as string
 
 export default defineConfig({
   main: {
@@ -36,6 +41,9 @@ export default defineConfig({
   renderer: {
     root: 'src/renderer',
     plugins: [react(), tailwindcss()],
+    define: {
+      __APP_VERSION__: JSON.stringify(appVersion)
+    },
     resolve: {
       alias: {
         '@renderer': resolve('src/renderer/src'),

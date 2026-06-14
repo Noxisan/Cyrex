@@ -244,7 +244,10 @@ export function Sidebar(): React.JSX.Element {
     <nav className="flex w-64 shrink-0 flex-col overflow-y-auto border-r border-border bg-surface">
       <div className="flex items-center gap-2.5 border-b border-border px-3 py-3">
         <img src={logoUrl} alt="" className="size-10 shrink-0" />
-        <span className="text-lg font-semibold tracking-tight">{t('app.name')}</span>
+        <div className="flex flex-col leading-tight">
+          <span className="text-lg font-semibold uppercase tracking-wide">{t('app.name')}</span>
+          <span className="text-[10px] font-medium text-fg-subtle">v{__APP_VERSION__}</span>
+        </div>
       </div>
 
       <Section title={t('sidebar.repositories')} icon={FolderGit2} count={repos.length}>
