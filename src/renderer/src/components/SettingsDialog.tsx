@@ -12,12 +12,10 @@ import {
 } from 'lucide-react'
 import { ACCENTS, useRepoStore } from '../store/repoStore'
 import type { ThemeMode, ViewMode } from '../store/repoStore'
+import { MOD_KEY as MOD } from '../lib/platform'
 import { LANGUAGES } from '../i18n'
 
 type SectionId = 'general' | 'appearance' | 'shortcuts'
-
-const isMac = navigator.userAgent.includes('Mac')
-const MOD = isMac ? '⌘' : 'Ctrl'
 
 /** Keyboard reference, derived from the handlers actually wired in the app. */
 function shortcuts(t: (k: string) => string): { keys: string[]; label: string }[] {

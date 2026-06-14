@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { useRepoStore } from '../store/repoStore'
+import { isMac } from '../lib/platform'
 import { useFetch, usePull, usePush, useStashSave } from '../hooks/useRepo'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import { ThemeToggle } from './ThemeToggle'
@@ -165,7 +166,7 @@ export function TopBar(): React.JSX.Element {
       >
         <Command size={16} strokeWidth={1.75} />
         <kbd className="hidden rounded border border-border px-1 text-[10px] text-fg-subtle xl:inline">
-          ⌘K
+          {isMac ? '⌘K' : 'Ctrl+K'}
         </kbd>
       </button>
       <LanguageSwitcher />
