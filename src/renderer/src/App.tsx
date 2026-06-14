@@ -1,4 +1,5 @@
 import { useRepoStore } from './store/repoStore'
+import { TitleBar } from './components/TitleBar'
 import { TopBar } from './components/TopBar'
 import { Sidebar } from './components/Sidebar'
 import { ViewTabs } from './components/ViewTabs'
@@ -23,6 +24,7 @@ export function App(): React.JSX.Element {
 
   return (
     <div className="flex h-full w-full flex-col bg-bg text-fg">
+      <TitleBar />
       <TopBar />
       <div className="flex min-h-0 flex-1">
         <Sidebar />

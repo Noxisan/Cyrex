@@ -34,7 +34,6 @@ import { ContextMenu } from './ContextMenu'
 import type { MenuState } from './ContextMenu'
 import { ConfirmDialog } from './ConfirmDialog'
 import type { ConfirmState } from './ConfirmDialog'
-import logoUrl from '../../../../build/icon.png'
 
 const LANE_COLORS = [
   'var(--color-lane-0)',
@@ -371,14 +370,6 @@ export function Sidebar(): React.JSX.Element {
 
   return (
     <nav className="flex w-64 shrink-0 flex-col overflow-y-auto border-r border-border bg-surface">
-      <div className="flex items-center gap-2.5 border-b border-border px-3 py-3">
-        <img src={logoUrl} alt="" className="size-10 shrink-0" />
-        <div className="flex flex-col leading-tight">
-          <span className="text-lg font-semibold uppercase tracking-wide">{t('app.name')}</span>
-          <span className="text-[10px] font-medium text-fg-subtle">v{__APP_VERSION__}</span>
-        </div>
-      </div>
-
       <Section title={t('sidebar.repositories')} icon={FolderGit2} count={repos.length}>
         {repos.length === 0 ? (
           <p className="px-3 py-1 ps-7 text-xs text-fg-subtle">{t('sidebar.empty')}</p>

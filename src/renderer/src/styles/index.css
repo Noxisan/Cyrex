@@ -186,6 +186,14 @@ body {
   user-select: none;
 }
 
+/* Custom frameless titlebar: the bar drags the window; interactive bits opt out. */
+.drag-region {
+  -webkit-app-region: drag;
+}
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+
 /* RTL support for Arabic/Urdu is driven by dir="rtl" on <html> (i18n). */
 
 ::-webkit-scrollbar {
