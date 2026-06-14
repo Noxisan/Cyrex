@@ -1,7 +1,8 @@
 import { join } from 'node:path'
 import { app, BrowserWindow, Menu, nativeImage, session, shell, Tray } from 'electron'
-import appIcon from '../../build/icon.png?asset'
-import trayIcon from '../../build/tray.png?asset'
+// The square mark (no wordmark) used for the window/titlebar and the tray.
+// The packaged launcher/taskbar icon is build/icon.png (set in electron-builder.yml).
+import windowIcon from '../../build/icon_only.png?asset'
 import { registerIpcHandlers } from './ipc'
 import { registerTerminalHandlers } from './terminal'
 
@@ -47,8 +48,8 @@ function createWindow(): void {
     show: false,
     backgroundColor: '#0e0f12',
     autoHideMenuBar: true,
-    // Window / taskbar icon (Linux + Windows; macOS uses the bundle icon).
-    icon: appIcon,
+    // Titlebar / window icon (Linux + Windows; macOS uses the bundle icon).
+    icon: windowIcon,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       // Electron security checklist (CLAUDE.md §4):
@@ -112,7 +113,7 @@ function showWindow(): void {
 /** Create the system-tray icon with a Show/Quit menu. */
 function createTray(): void {
   try {
-    const image = nativeImage.createFromPath(trayIcon)
+    const image = nativeImage.createFromPath(windowIcon)
     tray = new Tray(image)
     tray.setToolTip('Cyrex')
     tray.setContextMenu(
