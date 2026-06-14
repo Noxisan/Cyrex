@@ -111,13 +111,6 @@ export function TopBar(): React.JSX.Element {
 
   return (
     <header className="flex h-11 shrink-0 items-center gap-1 border-b border-border bg-surface px-3">
-      <div className="flex items-center gap-2 pe-2">
-        <span className="size-2.5 rounded-full bg-accent" aria-hidden />
-        <span className="text-sm font-semibold tracking-tight">{t('app.name')}</span>
-      </div>
-
-      <div className="mx-1 h-5 w-px bg-border" aria-hidden />
-
       <ToolButton
         label={t('actions.fetch')}
         icon={RefreshCw}
