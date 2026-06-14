@@ -29,7 +29,9 @@ import {
   commitDiffSchema,
   commitSchema,
   createBranchSchema,
+  createTagSchema,
   deleteBranchSchema,
+  tagNameSchema,
   discardSchema,
   fileOpSchema,
   interactiveRebaseSchema,
@@ -112,6 +114,30 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(
     IpcChannels.RepoTags,
     wrap(repoPathSchema, (req) => engine.tags(req.path))
+  )
+
+  ipcMain.handle(
+    IpcChannels.RepoCreateTag,
+    wrap(createTagSchema, async (req) => {
+      await engine.createTag(req.path, req.name, req.ref, req.message)
+      return null
+    })
+  )
+
+  ipcMain.handle(
+    IpcChannels.RepoDeleteTag,
+    wrap(tagNameSchema, async (req) => {
+      await engine.deleteTag(req.path, req.name)
+      return null
+    })
+  )
+
+  ipcMain.handle(
+    IpcChannels.RepoPushTag,
+    wrap(tagNameSchema, async (req) => {
+      await engine.pushTag(req.path, req.name)
+      return null
+    })
   )
 
   ipcMain.handle(

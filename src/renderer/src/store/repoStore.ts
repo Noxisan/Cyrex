@@ -75,6 +75,8 @@ interface RepoState {
   /** The unified Open Repository modal (local repos left, remote accounts right). */
   openRepoOpen: boolean
   createRepoOpen: boolean
+  /** Target ref (HEAD or a sha) for the Create Tag dialog; null when closed. */
+  createTagTarget: string | null
   /** The Settings dialog. */
   settingsOpen: boolean
   /** Resolved theme currently applied to the document. */
@@ -108,6 +110,8 @@ interface RepoState {
   closeRepoModal: () => void
   openCreateRepo: () => void
   closeCreateRepo: () => void
+  openCreateTag: (ref: string) => void
+  closeCreateTag: () => void
   openSettings: () => void
   closeSettings: () => void
   setThemeMode: (mode: ThemeMode) => void
@@ -190,6 +194,7 @@ export const useRepoStore = create<RepoState>((set, get) => ({
   paletteOpen: false,
   openRepoOpen: false,
   createRepoOpen: false,
+  createTagTarget: null,
   settingsOpen: false,
   theme: resolveTheme(initialThemeMode()),
   themeMode: initialThemeMode(),
@@ -265,6 +270,8 @@ export const useRepoStore = create<RepoState>((set, get) => ({
   closeRepoModal: () => set({ openRepoOpen: false }),
   openCreateRepo: () => set({ createRepoOpen: true }),
   closeCreateRepo: () => set({ createRepoOpen: false }),
+  openCreateTag: (ref) => set({ createTagTarget: ref }),
+  closeCreateTag: () => set({ createTagTarget: null }),
   openSettings: () => set({ settingsOpen: true }),
   closeSettings: () => set({ settingsOpen: false }),
 

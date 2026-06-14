@@ -39,6 +39,10 @@ export const IpcChannels = {
   RepoLog: 'repo:log',
   RepoBranches: 'repo:branches',
   RepoTags: 'repo:tags',
+  RepoCreateTag: 'repo:createTag',
+  /** DESTRUCTIVE locally — removes the tag ref (a pushed tag stays on the remote). */
+  RepoDeleteTag: 'repo:deleteTag',
+  RepoPushTag: 'repo:pushTag',
   /** Structured diff for a single commit (against its first parent). */
   RepoCommitDiff: 'repo:commitDiff',
   /** Diff for a single working-tree file (staged or unstaged). */
@@ -196,6 +200,18 @@ export interface IpcApi {
   [IpcChannels.RepoTags]: {
     request: { path: string }
     response: EngineResult<Tag[]>
+  }
+  [IpcChannels.RepoCreateTag]: {
+    request: { path: string; name: string; ref?: string; message?: string }
+    response: EngineResult<null>
+  }
+  [IpcChannels.RepoDeleteTag]: {
+    request: { path: string; name: string }
+    response: EngineResult<null>
+  }
+  [IpcChannels.RepoPushTag]: {
+    request: { path: string; name: string }
+    response: EngineResult<null>
   }
   [IpcChannels.RepoCommitDiff]: {
     request: { path: string; sha: string }

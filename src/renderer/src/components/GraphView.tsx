@@ -135,6 +135,7 @@ export function GraphView({ repoPath }: { repoPath: string }): React.JSX.Element
   const cherryPick = useCherryPick(repoPath)
   const revert = useRevert(repoPath)
   const openRebase = useRepoStore((s) => s.openRebase)
+  const openCreateTag = useRepoStore((s) => s.openCreateTag)
   const searchQuery = useRepoStore((s) => s.searchQuery)
   const searchActive = searchQuery.trim().length > 0
   const search = useSearch(repoPath, searchQuery)
@@ -163,7 +164,8 @@ export function GraphView({ repoPath }: { repoPath: string }): React.JSX.Element
     e.preventDefault()
     const items = [
       { label: t('commit.cherryPick'), onClick: () => cherryPick.mutate(commit.sha) },
-      { label: t('commit.revert'), onClick: () => revert.mutate(commit.sha) }
+      { label: t('commit.revert'), onClick: () => revert.mutate(commit.sha) },
+      { label: t('commit.createTag'), onClick: () => openCreateTag(commit.sha) }
     ]
     // Rebase needs a parent to use as the base; root commits have none.
     if (commit.parents.length > 0) {

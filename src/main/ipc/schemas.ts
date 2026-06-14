@@ -108,6 +108,17 @@ export const deleteBranchSchema = z.object({
   force: z.boolean().optional()
 })
 
+export const createTagSchema = z.object({
+  path: z.string().min(1),
+  name: refName,
+  ref: refName.optional(),
+  message: z.string().max(20_000).optional()
+})
+export const tagNameSchema = z.object({
+  path: z.string().min(1),
+  name: refName
+})
+
 export const stashSaveSchema = z.object({
   path: z.string().min(1),
   message: z.string().max(20_000).optional()

@@ -165,7 +165,20 @@
   "commit": {
     "cherryPick": "Auf aktuellen Branch cherry-picken",
     "revert": "Diesen Commit rückgängig machen",
-    "rebaseFromHere": "Interaktives Rebase ab hier"
+    "rebaseFromHere": "Interaktives Rebase ab hier",
+    "createTag": "Tag hier erstellen"
+  },
+  "tag": {
+    "createTitle": "Tag erstellen",
+    "at": "Bei",
+    "name": "Name",
+    "namePlaceholder": "v1.0.0",
+    "message": "Nachricht",
+    "messagePlaceholder": "Optional — eine Nachricht erstellt einen annotierten Tag",
+    "annotated": "annotiert",
+    "push": "Tag pushen",
+    "delete": "Tag löschen",
+    "deleteMessage": "Tag \"{{name}}\" löschen? Das entfernt ihn lokal; ein bereits gepushter Tag bleibt auf dem Remote, bis er auch dort gelöscht wird."
   },
   "rebase": {
     "title": "Interaktives Rebase",

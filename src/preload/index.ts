@@ -31,6 +31,10 @@ export const cyrexApi = {
     invoke(IpcChannels.RepoLog, { path, options }),
   branches: (path: string) => invoke(IpcChannels.RepoBranches, { path }),
   tags: (path: string) => invoke(IpcChannels.RepoTags, { path }),
+  createTag: (path: string, name: string, ref?: string, message?: string) =>
+    invoke(IpcChannels.RepoCreateTag, { path, name, ref, message }),
+  deleteTag: (path: string, name: string) => invoke(IpcChannels.RepoDeleteTag, { path, name }),
+  pushTag: (path: string, name: string) => invoke(IpcChannels.RepoPushTag, { path, name }),
   commitDiff: (path: string, sha: string) =>
     invoke(IpcChannels.RepoCommitDiff, { path, sha }),
   workingDiff: (path: string, file: string, staged: boolean, untracked: boolean) =>

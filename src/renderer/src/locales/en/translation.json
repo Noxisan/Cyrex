@@ -165,7 +165,20 @@
   "commit": {
     "cherryPick": "Cherry-pick onto current branch",
     "revert": "Revert this commit",
-    "rebaseFromHere": "Interactive rebase from here"
+    "rebaseFromHere": "Interactive rebase from here",
+    "createTag": "Create tag here"
+  },
+  "tag": {
+    "createTitle": "Create tag",
+    "at": "At",
+    "name": "Name",
+    "namePlaceholder": "v1.0.0",
+    "message": "Message",
+    "messagePlaceholder": "Optional — a message creates an annotated tag",
+    "annotated": "annotated",
+    "push": "Push tag",
+    "delete": "Delete tag",
+    "deleteMessage": "Delete tag \"{{name}}\"? This removes it locally; a tag already pushed stays on the remote until deleted there too."
   },
   "rebase": {
     "title": "Interactive Rebase",

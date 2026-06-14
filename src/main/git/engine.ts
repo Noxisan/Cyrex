@@ -694,6 +694,39 @@ export async function deleteBranch(
   await runGit(['branch', force ? '-D' : '-d', name], { cwd: repoPath })
 }
 
+// --- tags -------------------------------------------------------------------
+
+/**
+ * Create a tag at `ref` (default HEAD). A non-empty `message` makes it an
+ * annotated tag (`git tag -a -m`); otherwise it is lightweight.
+ */
+export async function createTag(
+  repoPath: string,
+  name: string,
+  ref?: string,
+  message?: string
+): Promise<void> {
+  const args = ['tag']
+  if (message && message.trim()) args.push('-a', '-m', message.trim())
+  args.push(name)
+  if (ref) args.push(ref)
+  await runGit(args, { cwd: repoPath })
+}
+
+/** DESTRUCTIVE locally: delete a tag ref (a pushed tag remains on the remote). */
+export async function deleteTag(repoPath: string, name: string): Promise<void> {
+  await runGit(['tag', '-d', name], { cwd: repoPath })
+}
+
+/** Push a single tag to the default remote. */
+export async function pushTag(repoPath: string, name: string): Promise<void> {
+  const remote = await defaultRemote(repoPath)
+  await runGit(['push', remote, `refs/tags/${name}`], {
+    cwd: repoPath,
+    timeoutMs: NETWORK_TIMEOUT
+  })
+}
+
 // --- remotes: fetch / pull / push -------------------------------------------
 //
 // Network operations delegate credentials entirely to the user's system git

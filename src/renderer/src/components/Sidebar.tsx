@@ -30,6 +30,8 @@ import {
   useStashes,
   useStashPop,
   useTags,
+  useDeleteTag,
+  usePushTag,
   useWorktrees,
   useWorktreeRemove
 } from '../hooks/useRepo'
@@ -233,6 +235,7 @@ export function Sidebar(): React.JSX.Element {
   const { t } = useTranslation()
   const { repos, activePath, setActive, addRepo, removeRepo, toggleFavorite, setRepoColor } =
     useRepoStore()
+  const openCreateTag = useRepoStore((s) => s.openCreateTag)
   const branches = useBranches(activePath)
   const tags = useTags(activePath)
   const stashes = useStashes(activePath)
@@ -250,6 +253,8 @@ export function Sidebar(): React.JSX.Element {
   const stashApply = useStashApply(path)
   const stashPop = useStashPop(path)
   const stashDrop = useStashDrop(path)
+  const deleteTag = useDeleteTag(path)
+  const pushTag = usePushTag(path)
   const worktreeRemove = useWorktreeRemove(path)
 
   const [menu, setMenu] = useState<MenuState | null>(null)
@@ -370,6 +375,29 @@ export function Sidebar(): React.JSX.Element {
               confirmLabel: t('stash.drop'),
               danger: true,
               onConfirm: () => stashDrop.mutate(index)
+            })
+        }
+      ]
+    })
+  }
+
+  const tagMenu = (e: React.MouseEvent, name: string): void => {
+    e.preventDefault()
+    setMenu({
+      x: e.clientX,
+      y: e.clientY,
+      items: [
+        { label: t('tag.push'), onClick: () => pushTag.mutate(name) },
+        {
+          label: t('tag.delete'),
+          danger: true,
+          onClick: () =>
+            setConfirm({
+              title: t('tag.delete'),
+              message: t('tag.deleteMessage', { name }),
+              confirmLabel: t('tag.delete'),
+              danger: true,
+              onConfirm: () => deleteTag.mutate(name)
             })
         }
       ]
@@ -575,12 +603,36 @@ export function Sidebar(): React.JSX.Element {
         )}
       </Section>
 
-      <Section title={t('sidebar.tags')} icon={TagIcon} count={tags.data?.length} defaultOpen={false}>
+      <Section
+        title={t('sidebar.tags')}
+        icon={TagIcon}
+        count={tags.data?.length}
+        defaultOpen={false}
+        action={
+          activePath && (
+            <button
+              type="button"
+              onClick={() => openCreateTag('HEAD')}
+              title={t('tag.createTitle')}
+              aria-label={t('tag.createTitle')}
+              className="rounded-[var(--radius-card)] p-1 text-fg-muted hover:bg-surface-2 hover:text-accent"
+            >
+              <Plus size={14} strokeWidth={2} />
+            </button>
+          )
+        }
+      >
         {!tags.data || tags.data.length === 0 ? (
           <p className="px-3 py-1 ps-7 text-xs text-fg-subtle">{t('sidebar.empty')}</p>
         ) : (
           tags.data.map((tg) => (
-            <RefRow key={tg.name} name={tg.name} onDoubleClick={() => checkout.mutate(tg.name)} />
+            <RefRow
+              key={tg.name}
+              name={tg.name}
+              onDoubleClick={() => checkout.mutate(tg.name)}
+              onContextMenu={(e) => tagMenu(e, tg.name)}
+              badge={tg.annotated ? t('tag.annotated') : undefined}
+            />
           ))
         )}
       </Section>

@@ -53,6 +53,21 @@ export function useTags(path: string | null) {
   })
 }
 
+export function useCreateTag(path: string) {
+  return useRepoMutation((v: { name: string; ref?: string; message?: string }) =>
+    window.cyrex.createTag(path, v.name, v.ref, v.message)
+  )
+}
+
+export function useDeleteTag(path: string) {
+  return useRepoMutation((name: string) => window.cyrex.deleteTag(path, name))
+}
+
+export function usePushTag(path: string) {
+  const { t } = useTranslation()
+  return useRepoMutation((name: string) => window.cyrex.pushTag(path, name), t('remote.pushed'))
+}
+
 export function useFileHistory(path: string | null, file: string | null) {
   return useQuery({
     queryKey: ['fileHistory', path, file],
