@@ -751,6 +751,81 @@ export async function push(repoPath: string, opts: PushOptions = {}): Promise<vo
   await runGit(args, { cwd: repoPath, timeoutMs: NETWORK_TIMEOUT })
 }
 
+// --- clone / link (hosting integration) -------------------------------------
+//
+// Clone authenticates with an optional token WITHOUT putting it in argv or in
+// the saved remote: the token is passed via the CYREX_CLONE_TOKEN env var, read
+// by an inline credential helper. The cloned remote keeps the clean https URL.
+// On success we best-effort seed the user's own credential helper so ordinary
+// fetch/push keep working (CLAUDE.md §4 prefers delegating to the system helper).
+
+/** Hostname of an https URL, or null if it isn't a parseable https URL. */
+function httpsHost(url: string): string | null {
+  try {
+    const u = new URL(url)
+    return u.protocol === 'https:' ? u.hostname : null
+  } catch {
+    return null
+  }
+}
+
+/** Best-effort: hand the token to the user's git credential helper (if any). */
+async function approveCredential(host: string, token: string): Promise<void> {
+  const input = `protocol=https\nhost=${host}\nusername=x-access-token\npassword=${token}\n\n`
+  try {
+    await runGit(['credential', 'approve'], { input })
+  } catch {
+    /* no helper configured — clone still worked via the inline helper */
+  }
+}
+
+/**
+ * Clone `cloneUrl` into `parentDir/name` and return the new RepoRef. When a
+ * `token` is given (private repo), it authenticates via an inline credential
+ * helper fed through the environment — never argv, never the saved config.
+ */
+export async function cloneRepo(
+  cloneUrl: string,
+  parentDir: string,
+  name: string,
+  token?: string
+): Promise<RepoRef> {
+  const target = join(parentDir, name)
+  if (existsSync(target)) throw new Error(`A folder named "${name}" already exists here.`)
+
+  const args: string[] = []
+  let env: Record<string, string> | undefined
+  if (token) {
+    // Inline helper responds only to `get`, reading the token from the env. The
+    // helper code is in argv but carries no secret; the token stays in env.
+    const helper =
+      '!f() { test "$1" = get && echo username=x-access-token && echo "password=$CYREX_CLONE_TOKEN"; }; f'
+    args.push('-c', 'credential.helper=', '-c', `credential.helper=${helper}`)
+    env = { CYREX_CLONE_TOKEN: token }
+  }
+  args.push('clone', cloneUrl, target)
+  await runGit(args, { cwd: parentDir, timeoutMs: NETWORK_TIMEOUT, env })
+
+  const host = httpsHost(cloneUrl)
+  if (token && host) await approveCredential(host, token)
+
+  return openRepo(target)
+}
+
+/**
+ * Point a repo's remote (default "origin") at `url`, adding it if missing. Used
+ * to link a local repo to a freshly created remote.
+ */
+export async function setOrCreateRemote(
+  repoPath: string,
+  url: string,
+  name = 'origin'
+): Promise<void> {
+  const { stdout } = await runGit(['remote'], { cwd: repoPath })
+  const has = stdout.split('\n').map((r) => r.trim()).includes(name)
+  await runGit(['remote', has ? 'set-url' : 'add', name, url], { cwd: repoPath })
+}
+
 // --- stash -----------------------------------------------------------------
 
 export async function stashList(repoPath: string): Promise<Stash[]> {

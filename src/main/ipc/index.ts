@@ -11,9 +11,18 @@ import type { ZodType } from 'zod'
 import { IpcChannels } from '@shared/ipc'
 import type { EngineResult, RepoRef } from '@shared/types'
 import * as engine from '../git/engine'
+import * as hosting from '../hosting/service'
 import { scrubSecrets } from '../git/cli'
 import {
   applyPartialSchema,
+  cloneSchema,
+  hostingConnectTokenSchema,
+  hostingCreateRepoSchema,
+  hostingDisconnectSchema,
+  hostingListReposSchema,
+  hostingPollLoginSchema,
+  hostingStartLoginSchema,
+  setRemoteSchema,
   checkoutRemoteSchema,
   checkoutSchema,
   cherryPickSchema,
@@ -385,6 +394,85 @@ export function registerIpcHandlers(): void {
     IpcChannels.RepoReset,
     wrap(resetSchema, async (req) => {
       await engine.resetTo(req.path, req.sha, req.mode)
+      return null
+    })
+  )
+
+  // --- directory picker + remote hosting -----------------------------------
+
+  ipcMain.handle(
+    IpcChannels.PickDirectory,
+    wrap<void, string | null>(null, async () => {
+      const win = BrowserWindow.getFocusedWindow()
+      const res = await dialog.showOpenDialog(win ?? undefined!, {
+        title: 'Choose a folder',
+        properties: ['openDirectory', 'createDirectory']
+      })
+      if (res.canceled || res.filePaths.length === 0) return null
+      return res.filePaths[0]
+    })
+  )
+
+  ipcMain.handle(
+    IpcChannels.HostingProviders,
+    wrap(null, async () => hosting.providers())
+  )
+
+  ipcMain.handle(
+    IpcChannels.HostingListAccounts,
+    wrap(null, async () => hosting.listAccounts())
+  )
+
+  ipcMain.handle(
+    IpcChannels.HostingStartLogin,
+    wrap(hostingStartLoginSchema, (req) => hosting.startLogin(req.provider))
+  )
+
+  ipcMain.handle(
+    IpcChannels.HostingPollLogin,
+    wrap(hostingPollLoginSchema, (req) => hosting.pollLogin(req.handle))
+  )
+
+  ipcMain.handle(
+    IpcChannels.HostingConnectToken,
+    wrap(hostingConnectTokenSchema, (req) => hosting.connectToken(req.provider, req.token))
+  )
+
+  ipcMain.handle(
+    IpcChannels.HostingDisconnect,
+    wrap(hostingDisconnectSchema, async (req) => {
+      hosting.disconnect(req.id)
+      return null
+    })
+  )
+
+  ipcMain.handle(
+    IpcChannels.HostingListRepos,
+    wrap(hostingListReposSchema, (req) => hosting.listRepos(req.accountId))
+  )
+
+  ipcMain.handle(
+    IpcChannels.HostingCreateRepo,
+    wrap(hostingCreateRepoSchema, (req) =>
+      hosting.createRepo(req.accountId, {
+        name: req.name,
+        description: req.description,
+        private: req.private
+      })
+    )
+  )
+
+  ipcMain.handle(
+    IpcChannels.RepoClone,
+    wrap(cloneSchema, (req) =>
+      hosting.cloneRepo(req.cloneUrl, req.parentDir, req.name, req.accountId)
+    )
+  )
+
+  ipcMain.handle(
+    IpcChannels.RepoSetRemote,
+    wrap(setRemoteSchema, async (req) => {
+      await engine.setOrCreateRemote(req.path, req.url, req.name)
       return null
     })
   )

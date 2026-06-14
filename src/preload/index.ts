@@ -7,7 +7,13 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { IpcChannels, TerminalChannels } from '@shared/ipc'
 import type { IpcApi } from '@shared/ipc'
-import type { RebaseTodoItem, TerminalData, TerminalExit, TerminalSession } from '@shared/types'
+import type {
+  HostingProviderId,
+  RebaseTodoItem,
+  TerminalData,
+  TerminalExit,
+  TerminalSession
+} from '@shared/types'
 
 type Req<C extends keyof IpcApi> = IpcApi[C]['request']
 type Res<C extends keyof IpcApi> = IpcApi[C]['response']
@@ -88,6 +94,34 @@ export const cyrexApi = {
   reflog: (path: string) => invoke(IpcChannels.RepoReflog, { path }),
   resetTo: (path: string, sha: string, mode: 'soft' | 'mixed' | 'hard') =>
     invoke(IpcChannels.RepoReset, { path, sha, mode }),
+
+  /** Pick a folder (e.g. a clone destination); returns the path or null. */
+  pickDirectory: () => invoke(IpcChannels.PickDirectory),
+  cloneRepo: (cloneUrl: string, parentDir: string, name: string, accountId?: string) =>
+    invoke(IpcChannels.RepoClone, { cloneUrl, parentDir, name, accountId }),
+  setRemote: (path: string, url: string, name?: string) =>
+    invoke(IpcChannels.RepoSetRemote, { path, url, name }),
+
+  /**
+   * Remote hosting (GitHub/GitLab/Bitbucket). Every method returns metadata
+   * only — access tokens stay in the main process and the OS keychain and are
+   * never exposed here (CLAUDE.md §4).
+   */
+  hosting: {
+    providers: () => invoke(IpcChannels.HostingProviders),
+    listAccounts: () => invoke(IpcChannels.HostingListAccounts),
+    startLogin: (provider: HostingProviderId) =>
+      invoke(IpcChannels.HostingStartLogin, { provider }),
+    pollLogin: (handle: string) => invoke(IpcChannels.HostingPollLogin, { handle }),
+    connectToken: (provider: HostingProviderId, token: string) =>
+      invoke(IpcChannels.HostingConnectToken, { provider, token }),
+    disconnect: (id: string) => invoke(IpcChannels.HostingDisconnect, { id }),
+    listRepos: (accountId: string) => invoke(IpcChannels.HostingListRepos, { accountId }),
+    createRepo: (
+      accountId: string,
+      input: { name: string; description?: string; private: boolean }
+    ) => invoke(IpcChannels.HostingCreateRepo, { accountId, ...input })
+  },
 
   /**
    * Embedded terminal. Data/Exit are main→renderer streams, so we expose

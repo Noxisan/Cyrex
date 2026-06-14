@@ -185,6 +185,75 @@ export const rebaseBranchSchema = z.object({
 export const cherryPickSchema = z.object({ path: z.string().min(1), sha: refName })
 export const revertSchema = z.object({ path: z.string().min(1), sha: refName })
 
+// --- Remote hosting ---------------------------------------------------------
+
+const providerId = z.enum(['github', 'gitlab', 'bitbucket'])
+
+// `${provider}:${login}` — bounded, no control chars.
+const accountId = z
+  .string()
+  .min(3)
+  .max(160)
+  .regex(/^[a-z]+:.+$/, 'invalid account id')
+  .refine((s) => !/\s/.test(s), 'invalid account id')
+  .refine((s) => ![...s].some((c) => c.charCodeAt(0) < 0x20), 'invalid account id')
+
+// A repository name on a provider (no path separators).
+const repoName = z
+  .string()
+  .min(1)
+  .max(100)
+  .regex(/^[A-Za-z0-9._-]+$/, 'invalid repository name')
+
+// HTTPS clone URL restricted to the supported hosts (defense in depth — the
+// renderer only ever passes URLs the provider API returned).
+const CLONE_HOSTS = new Set(['github.com', 'gitlab.com', 'bitbucket.org'])
+const cloneUrl = z
+  .string()
+  .url()
+  .refine((u) => {
+    try {
+      const url = new URL(u)
+      return url.protocol === 'https:' && CLONE_HOSTS.has(url.hostname)
+    } catch {
+      return false
+    }
+  }, 'unsupported clone URL')
+
+export const hostingStartLoginSchema = z.object({ provider: providerId })
+export const hostingPollLoginSchema = z.object({ handle: z.string().min(8).max(64) })
+export const hostingConnectTokenSchema = z.object({
+  provider: providerId,
+  token: z.string().min(1).max(500)
+})
+export const hostingDisconnectSchema = z.object({ id: accountId })
+export const hostingListReposSchema = z.object({ accountId })
+export const hostingCreateRepoSchema = z.object({
+  accountId,
+  name: repoName,
+  description: z.string().max(2000).optional(),
+  private: z.boolean()
+})
+
+// A folder name for a clone target: no separators or traversal.
+const folderName = z
+  .string()
+  .min(1)
+  .max(255)
+  .refine((p) => !/[\\/]/.test(p) && p !== '.' && p !== '..', 'invalid folder name')
+
+export const cloneSchema = z.object({
+  cloneUrl,
+  parentDir: z.string().min(1),
+  name: folderName,
+  accountId: accountId.optional()
+})
+export const setRemoteSchema = z.object({
+  path: z.string().min(1),
+  url: z.string().url(),
+  name: refName.optional()
+})
+
 export type RepoPathRequest = z.infer<typeof repoPathSchema>
 export type LogRequest = z.infer<typeof logSchema>
 export type CommitDiffRequest = z.infer<typeof commitDiffSchema>

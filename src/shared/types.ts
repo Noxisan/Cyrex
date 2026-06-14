@@ -277,3 +277,60 @@ export interface BlameLine {
 export type EngineResult<T> =
   | { ok: true; data: T }
   | { ok: false; error: string }
+
+// --- Remote hosting (GitHub / GitLab / Bitbucket) ---------------------------
+//
+// These cross the main<->renderer boundary and therefore carry NO secrets
+// (CLAUDE.md §4). Access tokens live only in the main process and the OS
+// keychain; the renderer sees account/repo metadata and the device user code.
+
+export type HostingProviderId = 'github' | 'gitlab' | 'bitbucket'
+
+/** A connected hosting account — metadata only, never a token. */
+export interface HostingAccount {
+  /** Stable local id: `${provider}:${login}`. */
+  id: string
+  provider: HostingProviderId
+  login: string
+  name: string | null
+  avatarUrl: string | null
+}
+
+/** A repository on a hosting provider (browse/clone candidate). */
+export interface RemoteRepo {
+  id: string
+  /** "owner/name". */
+  fullName: string
+  name: string
+  owner: string
+  private: boolean
+  description: string | null
+  /** HTTPS clone URL (no embedded credentials). */
+  cloneUrl: string
+  htmlUrl: string
+  defaultBranch: string | null
+  updatedAt: string | null
+}
+
+export interface CreateRepoInput {
+  name: string
+  description?: string
+  private: boolean
+}
+
+/** Returned when an OAuth device-flow login starts; the user code is shown. */
+export interface DeviceLoginStart {
+  /** Opaque handle the renderer passes to poll; the device_code stays in main. */
+  handle: string
+  userCode: string
+  verificationUri: string
+  intervalSec: number
+}
+
+/** One poll of a device-flow login. On `authorized` the account is saved. */
+export type DeviceLoginStatus =
+  | { status: 'pending' }
+  | { status: 'slowDown' }
+  | { status: 'authorized'; account: HostingAccount }
+  | { status: 'expired' }
+  | { status: 'denied' }
