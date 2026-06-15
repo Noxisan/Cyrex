@@ -6,8 +6,12 @@
 
 A calm, cross-platform visual Git client for Windows, Linux, and macOS. Cyrex turns everyday Git work — commit, branch, merge, rebase, stash, remotes — into a fast, readable, graphical experience without hiding what Git is actually doing.
 
-<!-- Badges: build status, license, latest release, platforms. Wired once CI exists. -->
-Status: early development (0.1.0) · License: MIT · Platforms: Windows, Linux, macOS
+<p align="center">
+  <a href="https://github.com/Noxisan/Cyrex/actions/workflows/release.yml"><img src="https://github.com/Noxisan/Cyrex/actions/workflows/release.yml/badge.svg" alt="Release build status" /></a>
+  <a href="https://github.com/Noxisan/Cyrex/releases/latest"><img src="https://img.shields.io/github/v/release/Noxisan/Cyrex?label=release" alt="Latest release" /></a>
+  <a href="#license"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT" /></a>
+  <img src="https://img.shields.io/badge/platforms-Windows%20%7C%20Linux%20%7C%20macOS-555" alt="Supported platforms" />
+</p>
 
 <p align="center">
   <img src="docs/screenshots/graph.png" alt="Cyrex commit graph view" width="900" />
