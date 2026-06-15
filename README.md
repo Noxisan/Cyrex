@@ -24,61 +24,33 @@ A calm, cross-platform visual Git client for Windows, Linux, and macOS. Cyrex tu
 - Branch, merge, rebase (including interactive), cherry-pick, revert, stash.
 - Side-by-side and inline diffs with syntax highlighting.
 - Multi-repo management with quick switching.
-- Calm, flat, minimal UI with a single crimson accent, light and dark themes, and 11 shipped languages.
+- Calm, flat, minimal UI with a single crimson accent, light and dark themes, and 11 bundled languages.
 
 ## Install
 
-Pre-built installers are produced per platform once the release pipeline is in place.
+Download the latest installer for your platform from the [Releases page](https://github.com/Noxisan/Cyrex/releases/latest):
 
-- Windows: NSIS installer and a portable build.
-- Linux: AppImage and deb.
-- macOS: dmg (built on macOS; signed/notarized).
+- **Windows** — `Cyrex-Setup-*.exe` (NSIS installer) or `Cyrex-*.exe` (portable).
+- **Linux** — `*.AppImage` or `*_amd64.deb`.
+- **macOS** — `*-arm64.dmg` (Apple Silicon). The build is currently unsigned, so on first launch allow it under System Settings → Privacy & Security.
 
-Until the first release, see Build from source below.
+Prefer to build it yourself? See [Build from source](#build-from-source).
 
-## Screenshots
+## Features
 
-The commit graph view is shown above. A fuller gallery — diff view, staging area, and sidebar — will be added as the UI stabilizes.
+Cyrex aims to cover everyday Git work and then some — all rendered from real repository state, never faked.
 
-## Feature matrix
+**Core Git** — open and switch repositories, a visual commit graph with lanes/refs/tags, full working-tree status, and branch checkout/create/rename/delete. Commit, amend, and sign; merge, cherry-pick, and revert; rebase, including an interactive rebase UI.
 
-| Feature | Status |
-|---|---|
-| Open / switch repositories | Done |
-| Commit graph (lanes, refs, tags) | Done |
-| Status (staged / unstaged / untracked / conflicts) | Done |
-| Branch and tag listing | Done |
-| Branch checkout / create / rename / delete | Done |
-| Per-commit diff view (inline + side-by-side) | Done |
-| Syntax highlighting in diffs | Done |
-| Stage / unstage / discard by file | Done |
-| Stage / unstage by hunk and line | Done |
-| Commit staged changes | Done |
-| Amend / sign commits | Done |
-| Merge / cherry-pick / revert | Done |
-| In-progress operation banner (continue / abort) | Done |
-| Rebase | Done |
-| Interactive rebase UI | Done |
-| Stash save / apply / pop / drop | Done |
-| Fetch / pull / push, upstream tracking | Done |
-| Conflict detection and resolution UI | Done |
-| Blame and per-file history | Done |
-| Commit search (message / author / sha) | Done |
-| Undo / reflog surface | Done |
-| Embedded terminal (command runner) | Done |
-| Command palette (Cmd/Ctrl+K) | Done |
-| Drag-and-drop branch merge / rebase | Done |
-| Hosting integration: GitHub (browse / clone / create / link) | Done |
-| Hosting integration: GitLab (device flow + token) | Done |
-| Hosting integration: Bitbucket (app password) | Done |
-| Settings: theme (light / dark / system), accent palettes, shortcuts | Done |
-| Tags: create (lightweight / annotated), delete, push | Done |
-| Worktrees: list, add, open, remove | Done |
-| Submodules: list with status, init / update / sync, add | Done |
-| Git LFS awareness: tracked patterns, pointer vs. content, pull | Done |
-| Visual .gitignore editing with live match preview | Done |
-| Conventional Commit helper (type / scope / breaking) | Done |
-| Image diffs (before/after with dimensions and size) | Done |
+**Staging & diffs** — stage and unstage by file, hunk, or line; inline and side-by-side diffs with syntax highlighting; visual image diffs (before/after with dimensions and size); and a Conventional Commit helper.
+
+**Branches, tags & worktrees** — stash save/apply/pop/drop; lightweight and annotated tags; worktrees; submodules with status and init/update/sync; Git LFS awareness; and visual `.gitignore` editing with a live match preview.
+
+**Remotes & hosting** — fetch, pull, push, and upstream tracking; conflict detection and a resolution UI; and credential-safe integration with GitHub, GitLab, and Bitbucket (browse, clone, create, link).
+
+**Navigation & safety** — blame and per-file history, commit search by message/author/hash, an undo (reflog) surface, a command palette (Cmd/Ctrl+K), drag-and-drop branch merge/rebase, and clear confirmation on every destructive action.
+
+**Experience** — an embedded terminal, multi-repo management, light/dark/system themes with accent palettes, and 11 bundled languages.
 
 ## Supported languages
 
@@ -103,13 +75,9 @@ The engine currently runs on the system `git` binary (the CLI fallback described
 
 ### Cross-platform builds
 
-Because the engine will use a native module, building every OS from one machine is not practical:
+`npm run dist` packages installers for the machine it runs on. Building every OS from one machine isn't practical — macOS dmg needs macOS tooling, and Windows targets are most reliable on Windows.
 
-- Linux (deb + AppImage) builds natively on Linux.
-- macOS (dmg) requires a real macOS machine or a macOS CI runner; signing and notarization need Apple credentials.
-- Windows (NSIS + portable) is most reliable when built on Windows or a Windows CI runner.
-
-The recommended setup is a GitHub Actions matrix (`ubuntu-latest`, `windows-latest`, `macos-latest`) that rebuilds native modules and runs electron-builder per OS.
+Release installers are therefore produced by a GitHub Actions matrix (`ubuntu-latest`, `windows-latest`, `macos-latest`) that runs electron-builder per OS and publishes the artifacts to the GitHub Release — see [`.github/workflows/release.yml`](.github/workflows/release.yml). It triggers on each `v*` tag.
 
 ## Contributing
 
