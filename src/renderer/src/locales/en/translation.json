@@ -58,7 +58,7 @@
     "tokenTitle": "Connect {{provider}} with a token",
     "tokenHint": "Create a personal access token with repo scope and paste it here. It is stored in your OS keychain and never leaves this machine.",
     "tokenHint_gitlab": "Create a personal access token with the 'api' scope and paste it here. It is stored in your OS keychain and never leaves this machine.",
-    "tokenHint_bitbucket": "Create an Atlassian API token with scopes (read:user:bitbucket, read:repository:bitbucket, write:repository:bitbucket) — a token without scopes will not work. Paste it as email:api_token. It is stored in your OS keychain and never leaves this machine.",
+    "tokenHint_bitbucket": "Create an Atlassian API token with scopes (read:user:bitbucket, read:workspace:bitbucket, read:repository:bitbucket, write:repository:bitbucket) — a token without scopes will not work. Paste it as email:api_token. It is stored in your OS keychain and never leaves this machine.",
     "tokenPlaceholder": "Personal access token",
     "connect": "Connect",
     "cloneTitle": "Clone a repository",

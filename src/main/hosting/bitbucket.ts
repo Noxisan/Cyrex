@@ -119,7 +119,7 @@ async function api<T>(secret: string, path: string, init?: RequestInit): Promise
         throw new Error(
           `Bitbucket rejected the API token (${res.status}${detail ? `: ${detail}` : ''}). ` +
             'Use an Atlassian API token (id.atlassian.com) created with scopes ' +
-            'read:user:bitbucket, read:repository:bitbucket, write:repository:bitbucket, ' +
+            'read:user:bitbucket, read:workspace:bitbucket, read:repository:bitbucket, write:repository:bitbucket, ' +
             'and connect as email:api_token (your Atlassian account email, not your Bitbucket username).'
         )
       }
@@ -129,8 +129,8 @@ async function api<T>(secret: string, path: string, init?: RequestInit): Promise
       throw new Error(
         `Bitbucket rejected the credentials (${res.status}${detail ? `: ${detail}` : ''}). ` +
           'If you pasted a token, paste it as email:api_token (your Atlassian account email ' +
-          'and an API token from id.atlassian.com with read:user:bitbucket + read:repository:bitbucket ' +
-          'scopes). If you used browser login, reconnect your Bitbucket account.'
+          'and an API token from id.atlassian.com with read:user:bitbucket + read:workspace:bitbucket + ' +
+          'read:repository:bitbucket scopes). If you used browser login, reconnect your Bitbucket account.'
       )
     }
     throw new Error(`Bitbucket API error ${res.status}${detail ? `: ${detail}` : ''}`)
@@ -326,17 +326,18 @@ export const bitbucket: HostingProvider = {
   },
 
   async listRepos(secret: string): Promise<RemoteRepo[]> {
-    // The global `GET /repositories?role=` endpoint is deprecated (Bitbucket
-    // CHANGE-2770). Enumerate the user's workspaces, then list repositories
-    // within each one via the supported `/repositories/{workspace}` endpoint.
+    // Bitbucket CHANGE-2770 removed the cross-workspace endpoints — both the
+    // global `GET /repositories` and `GET /user/permissions/workspaces` (they
+    // return 410 Gone). Enumerate the user's workspaces via the supported
+    // `GET /workspaces`, then list repos within each via `/repositories/{ws}`.
     const slugs = new Set<string>()
-    let wnext: string | null = '/user/permissions/workspaces?pagelen=100'
+    let wnext: string | null = '/workspaces?pagelen=100'
     for (let page = 0; page < 10 && wnext; page++) {
-      const body: { values: { workspace?: { slug?: string } }[]; next?: string } = await api<{
-        values: { workspace?: { slug?: string } }[]
+      const body: { values: { slug?: string }[]; next?: string } = await api<{
+        values: { slug?: string }[]
         next?: string
       }>(secret, wnext)
-      for (const m of body.values) if (m.workspace?.slug) slugs.add(m.workspace.slug)
+      for (const w of body.values) if (w.slug) slugs.add(w.slug)
       wnext = body.next ?? null
     }
 

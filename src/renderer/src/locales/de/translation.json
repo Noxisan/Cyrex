@@ -58,7 +58,7 @@
     "tokenTitle": "{{provider}} mit Token verbinden",
     "tokenHint": "Erstelle einen Personal Access Token mit repo-Scope und füge ihn hier ein. Er wird im Schlüsselbund deines Systems gespeichert und verlässt diesen Rechner nie.",
     "tokenHint_gitlab": "Erstelle einen Personal Access Token mit dem Scope 'api' und füge ihn hier ein. Er wird im Schlüsselbund deines Systems gespeichert und verlässt diesen Rechner nie.",
-    "tokenHint_bitbucket": "Erstelle ein Atlassian-API-Token mit Scopes (read:user:bitbucket, read:repository:bitbucket, write:repository:bitbucket) — ein Token ohne Scopes funktioniert nicht. Füge es als email:api_token ein. Es wird im Schlüsselbund deines Systems gespeichert und verlässt diesen Rechner nie.",
+    "tokenHint_bitbucket": "Erstelle ein Atlassian-API-Token mit Scopes (read:user:bitbucket, read:workspace:bitbucket, read:repository:bitbucket, write:repository:bitbucket) — ein Token ohne Scopes funktioniert nicht. Füge es als email:api_token ein. Es wird im Schlüsselbund deines Systems gespeichert und verlässt diesen Rechner nie.",
     "tokenPlaceholder": "Personal Access Token",
     "connect": "Verbinden",
     "cloneTitle": "Repository klonen",
