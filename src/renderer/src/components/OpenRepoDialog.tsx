@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CloudOff, FilePlus2, FolderOpen, Lock, Plus, Search } from 'lucide-react'
-import type { CloneProgress } from '@shared/types'
 import { useRepoStore } from '../store/repoStore'
+import { useProgressStore } from '../store/progressStore'
 import { useAccounts, useCloneRepo, useDisconnect, useRemoteRepos } from '../hooks/useHosting'
 import { useToastStore } from '../store/toastStore'
 import { ConnectWizard } from './ConnectWizard'
@@ -32,10 +32,9 @@ export function OpenRepoDialog(): React.JSX.Element | null {
   const [accountId, setAccountId] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<string | null>(null)
-  const [cloneProgress, setCloneProgress] = useState<CloneProgress | null>(null)
-
-  // Stream clone progress from the main process while a clone is in flight.
-  useEffect(() => window.cyrex.onCloneProgress((p) => setCloneProgress(p)), [])
+  // Detailed clone progress from the global git-progress stream (op === clone).
+  const gitProgress = useProgressStore((s) => s.progress)
+  const cloneProgress = gitProgress?.op === 'clone' ? gitProgress : null
 
   const activeAccount = accountId ?? accounts?.[0]?.id ?? null
   const {
@@ -68,7 +67,6 @@ export function OpenRepoDialog(): React.JSX.Element | null {
     if (!chosen || !activeAccount) return
     const dir = await window.cyrex.pickDirectory()
     if (!dir.ok || !dir.data) return
-    setCloneProgress(null)
     clone.mutate(
       { cloneUrl: chosen.cloneUrl, parentDir: dir.data, name: chosen.name, accountId: activeAccount },
       {

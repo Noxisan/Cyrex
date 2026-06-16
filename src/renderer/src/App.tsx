@@ -1,5 +1,8 @@
+import { useEffect } from 'react'
 import { useRepoStore } from './store/repoStore'
+import { useProgressStore } from './store/progressStore'
 import { TitleBar } from './components/TitleBar'
+import { GitProgressBar } from './components/GitProgressBar'
 import { TopBar } from './components/TopBar'
 import { Sidebar } from './components/Sidebar'
 import { ViewTabs } from './components/ViewTabs'
@@ -24,9 +27,14 @@ import { GitignoreDialog } from './components/GitignoreDialog'
 export function App(): React.JSX.Element {
   const activePath = useRepoStore((s) => s.activePath)
   const viewMode = useRepoStore((s) => s.viewMode)
+  const setProgress = useProgressStore((s) => s.setProgress)
+
+  // Feed the global progress bar from the main-process git progress stream.
+  useEffect(() => window.cyrex.onGitProgress(setProgress), [setProgress])
 
   return (
     <div className="flex h-full w-full flex-col bg-bg text-fg">
+      <GitProgressBar />
       <TitleBar />
       <TopBar />
       <div className="flex min-h-0 flex-1">

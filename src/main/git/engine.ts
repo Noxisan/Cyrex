@@ -13,7 +13,6 @@ import { existsSync } from 'node:fs'
 import type {
   BlameLine,
   Branch,
-  CloneProgress,
   Commit,
   CommitContext,
   CommitDiff,
@@ -21,6 +20,8 @@ import type {
   DiffFile,
   FileStatus,
   FileStatusCode,
+  GitOp,
+  GitProgress,
   LfsFile,
   LfsStatus,
   LogOptions,
@@ -774,19 +775,35 @@ function inlineCredential(auth: CloneAuth): { args: string[]; env: Record<string
 }
 
 /** Fetch all remotes and prune deleted remote-tracking branches. */
-export async function fetch(repoPath: string, auth?: CloneAuth): Promise<void> {
+export async function fetch(
+  repoPath: string,
+  auth?: CloneAuth,
+  onProgress?: (p: GitProgress) => void
+): Promise<void> {
   const cred = auth ? inlineCredential(auth) : { args: [], env: undefined }
-  await runGit([...cred.args, 'fetch', '--all', '--prune'], {
+  await runGit([...cred.args, 'fetch', '--all', '--prune', '--progress'], {
     cwd: repoPath,
     timeoutMs: NETWORK_TIMEOUT,
-    env: cred.env
+    env: cred.env,
+    onStderr: onProgress ? gitProgressHandler('fetch', onProgress) : undefined
   })
+  onProgress?.({ op: 'fetch', phase: 'done', percent: 100 })
 }
 
 /** Pull the current branch from its upstream (merge per the user's git config). */
-export async function pull(repoPath: string, auth?: CloneAuth): Promise<void> {
+export async function pull(
+  repoPath: string,
+  auth?: CloneAuth,
+  onProgress?: (p: GitProgress) => void
+): Promise<void> {
   const cred = auth ? inlineCredential(auth) : { args: [], env: undefined }
-  await runGit([...cred.args, 'pull'], { cwd: repoPath, timeoutMs: NETWORK_TIMEOUT, env: cred.env })
+  await runGit([...cred.args, 'pull', '--progress'], {
+    cwd: repoPath,
+    timeoutMs: NETWORK_TIMEOUT,
+    env: cred.env,
+    onStderr: onProgress ? gitProgressHandler('pull', onProgress) : undefined
+  })
+  onProgress?.({ op: 'pull', phase: 'done', percent: 100 })
 }
 
 export interface PushOptions {
@@ -798,7 +815,8 @@ export interface PushOptions {
 export async function push(
   repoPath: string,
   opts: PushOptions = {},
-  auth?: CloneAuth
+  auth?: CloneAuth,
+  onProgress?: (p: GitProgress) => void
 ): Promise<void> {
   const branch = (
     await runGit(['symbolic-ref', '--quiet', '--short', 'HEAD'], {
@@ -816,13 +834,19 @@ export async function push(
   ).stdout.trim()
 
   const cred = auth ? inlineCredential(auth) : { args: [], env: undefined }
-  const args = [...cred.args, 'push']
+  const args = [...cred.args, 'push', '--progress']
   if (opts.force) args.push('--force-with-lease')
   if (!upstream) {
     // First push: publish the branch and set its upstream.
     args.push('-u', await defaultRemote(repoPath), 'HEAD')
   }
-  await runGit(args, { cwd: repoPath, timeoutMs: NETWORK_TIMEOUT, env: cred.env })
+  await runGit(args, {
+    cwd: repoPath,
+    timeoutMs: NETWORK_TIMEOUT,
+    env: cred.env,
+    onStderr: onProgress ? gitProgressHandler('push', onProgress) : undefined
+  })
+  onProgress?.({ op: 'push', phase: 'done', percent: 100 })
 }
 
 // --- clone / link (hosting integration) -------------------------------------
@@ -863,30 +887,36 @@ async function approveCredential(host: string, auth: CloneAuth): Promise<void> {
   }
 }
 
-/** Parse one `git clone --progress` stderr line into a CloneProgress, or null. */
-function parseCloneLine(line: string): CloneProgress | null {
+/** Parse one git `--progress` stderr line into a phase + percent, or null. */
+function parseProgressLine(line: string): Omit<GitProgress, 'op'> | null {
   let m: RegExpMatchArray | null
   if ((m = line.match(/Receiving objects:\s+(\d+)%/))) return { phase: 'receiving', percent: +m[1] }
+  if ((m = line.match(/Writing objects:\s+(\d+)%/))) return { phase: 'writing', percent: +m[1] }
   if ((m = line.match(/Resolving deltas:\s+(\d+)%/))) return { phase: 'resolving', percent: +m[1] }
   if ((m = line.match(/Compressing objects:\s+(\d+)%/)))
     return { phase: 'compressing', percent: +m[1] }
+  if ((m = line.match(/Counting objects:\s+(\d+)%/))) return { phase: 'counting', percent: +m[1] }
+  if (/Enumerating objects/.test(line)) return { phase: 'enumerating', percent: null }
   if (/Counting objects/.test(line)) return { phase: 'counting', percent: null }
   return null
 }
 
 /**
  * Build a stderr handler that splits git's progress stream (lines end in \r as
- * git overwrites the same line) and forwards parsed progress. Keeps a tail so a
- * chunk that splits mid-line isn't mis-parsed.
+ * git overwrites the same line) and forwards parsed progress tagged with `op`.
+ * Keeps a tail so a chunk that splits mid-line isn't mis-parsed.
  */
-function cloneProgressHandler(onProgress: (p: CloneProgress) => void): (chunk: string) => void {
+function gitProgressHandler(
+  op: GitOp,
+  onProgress: (p: GitProgress) => void
+): (chunk: string) => void {
   let tail = ''
   return (chunk) => {
     const parts = (tail + chunk).split(/[\r\n]/)
     tail = parts.pop() ?? ''
     for (const line of parts) {
-      const p = parseCloneLine(line)
-      if (p) onProgress(p)
+      const p = parseProgressLine(line)
+      if (p) onProgress({ op, ...p })
     }
   }
 }
@@ -902,7 +932,7 @@ export async function cloneRepo(
   parentDir: string,
   name: string,
   auth?: CloneAuth,
-  onProgress?: (p: CloneProgress) => void
+  onProgress?: (p: GitProgress) => void
 ): Promise<RepoRef> {
   const target = join(parentDir, name)
   if (existsSync(target)) throw new Error(`A folder named "${name}" already exists here.`)
@@ -914,9 +944,9 @@ export async function cloneRepo(
     cwd: parentDir,
     timeoutMs: NETWORK_TIMEOUT,
     env: cred.env,
-    onStderr: onProgress ? cloneProgressHandler(onProgress) : undefined
+    onStderr: onProgress ? gitProgressHandler('clone', onProgress) : undefined
   })
-  onProgress?.({ phase: 'done', percent: 100 })
+  onProgress?.({ op: 'clone', phase: 'done', percent: 100 })
 
   const host = httpsHost(cloneUrl)
   if (auth && host) await approveCredential(host, auth)

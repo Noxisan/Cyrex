@@ -5,10 +5,10 @@
  */
 
 import { contextBridge, ipcRenderer } from 'electron'
-import { CloneChannels, IpcChannels, TerminalChannels, WindowChannels } from '@shared/ipc'
+import { GitChannels, IpcChannels, TerminalChannels, WindowChannels } from '@shared/ipc'
 import type { IpcApi } from '@shared/ipc'
 import type {
-  CloneProgress,
+  GitProgress,
   DiffSource,
   HostingProviderId,
   RebaseTodoItem,
@@ -131,11 +131,11 @@ export const cyrexApi = {
   pickDirectory: () => invoke(IpcChannels.PickDirectory),
   cloneRepo: (cloneUrl: string, parentDir: string, name: string, accountId?: string) =>
     invoke(IpcChannels.RepoClone, { cloneUrl, parentDir, name, accountId }),
-  /** Subscribe to clone progress while a cloneRepo call is in flight. */
-  onCloneProgress: (cb: (p: CloneProgress) => void): (() => void) => {
-    const listener = (_e: unknown, p: CloneProgress): void => cb(p)
-    ipcRenderer.on(CloneChannels.Progress, listener)
-    return () => ipcRenderer.removeListener(CloneChannels.Progress, listener)
+  /** Subscribe to git network progress (clone/fetch/pull/push) while in flight. */
+  onGitProgress: (cb: (p: GitProgress) => void): (() => void) => {
+    const listener = (_e: unknown, p: GitProgress): void => cb(p)
+    ipcRenderer.on(GitChannels.Progress, listener)
+    return () => ipcRenderer.removeListener(GitChannels.Progress, listener)
   },
   setRemote: (path: string, url: string, name?: string) =>
     invoke(IpcChannels.RepoSetRemote, { path, url, name }),

@@ -8,10 +8,10 @@
 import { randomUUID } from 'node:crypto'
 import { shell } from 'electron'
 import type {
-  CloneProgress,
   CreateRepoInput,
   DeviceLoginStart,
   DeviceLoginStatus,
+  GitProgress,
   HostingAccount,
   HostingProviderId,
   RemoteRepo,
@@ -196,7 +196,7 @@ export function cloneRepo(
   parentDir: string,
   name: string,
   accountId?: string,
-  onProgress?: (p: CloneProgress) => void
+  onProgress?: (p: GitProgress) => void
 ): Promise<RepoRef> {
   const secret = accountId ? credentials.getToken(accountId) : null
   const auth = accountId && secret ? cloneAuth(accountId, secret) : undefined

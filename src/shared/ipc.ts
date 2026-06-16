@@ -178,12 +178,12 @@ export const TerminalChannels = {
 } as const
 
 /**
- * Clone progress. A main→renderer stream emitted while a `RepoClone` invocation
- * is in flight, so it is kept out of the request/response IpcApi map (like the
- * terminal streams). The renderer subscribes via the preload bridge.
+ * Network git progress. A main→renderer stream emitted while a clone / fetch /
+ * pull / push is in flight, so it is kept out of the request/response IpcApi map
+ * (like the terminal streams). The renderer subscribes via the preload bridge.
  */
-export const CloneChannels = {
-  Progress: 'clone:progress'
+export const GitChannels = {
+  Progress: 'git:progress'
 } as const
 
 /**

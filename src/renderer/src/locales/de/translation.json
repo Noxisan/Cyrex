@@ -73,8 +73,10 @@
     "cloning": "Wird geklont…",
     "cloned": "{{name}} geklont",
     "clonePhase": {
+      "enumerating": "Aufzählen…",
       "counting": "Objekte zählen…",
       "compressing": "Komprimieren…",
+      "writing": "Objekte schreiben",
       "receiving": "Objekte empfangen",
       "resolving": "Deltas auflösen",
       "done": "Abschließen…"

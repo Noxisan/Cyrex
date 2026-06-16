@@ -13,10 +13,21 @@ export interface RepoRef {
   name: string
 }
 
-/** Streamed progress of a clone, parsed from `git clone --progress` stderr. */
-export interface CloneProgress {
-  /** The current git phase; `done` is sent when the clone completes. */
-  phase: 'counting' | 'compressing' | 'receiving' | 'resolving' | 'done'
+/** A network git operation that streams progress. */
+export type GitOp = 'clone' | 'fetch' | 'pull' | 'push'
+
+/** Streamed progress of a network git op, parsed from `--progress` stderr. */
+export interface GitProgress {
+  op: GitOp
+  /** The current git phase; `done` is sent when the op completes. */
+  phase:
+    | 'enumerating'
+    | 'counting'
+    | 'compressing'
+    | 'writing'
+    | 'receiving'
+    | 'resolving'
+    | 'done'
   /** Percent (0–100) of the current phase, or null when indeterminate. */
   percent: number | null
 }

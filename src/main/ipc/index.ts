@@ -7,9 +7,10 @@
  */
 
 import { BrowserWindow, dialog, ipcMain } from 'electron'
+import type { IpcMainInvokeEvent } from 'electron'
 import type { ZodType } from 'zod'
-import { CloneChannels, IpcChannels } from '@shared/ipc'
-import type { EngineResult, RepoRef } from '@shared/types'
+import { GitChannels, IpcChannels } from '@shared/ipc'
+import type { EngineResult, GitProgress, RepoRef } from '@shared/types'
 import * as engine from '../git/engine'
 import * as hosting from '../hosting/service'
 import { imageVersions } from '../images'
@@ -82,6 +83,11 @@ function wrap<TReq, TRes>(
       return { ok: false, error: scrubSecrets(message) }
     }
   }
+}
+
+/** Push a git progress event to the renderer that invoked the op. */
+function sendProgress(e: IpcMainInvokeEvent, p: GitProgress): void {
+  if (!e.sender.isDestroyed()) e.sender.send(GitChannels.Progress, p)
 }
 
 export function registerIpcHandlers(): void {
@@ -409,31 +415,43 @@ export function registerIpcHandlers(): void {
   )
 
   // Network ops resolve a token from a connected hosting account matching the
-  // repo's remote host, so a token-cloned HTTPS repo authenticates even with no
-  // system git credential helper (auth is undefined for ssh / unknown hosts).
-  ipcMain.handle(
-    IpcChannels.RepoFetch,
-    wrap(repoPathSchema, async (req) => {
-      await engine.fetch(req.path, await hosting.authForRepo(req.path))
-      return null
-    })
-  )
+  // repo's remote host (so a token-cloned HTTPS repo authenticates without a
+  // system git credential helper) and stream progress on GitChannels.Progress.
+  // Handled directly (not via `wrap`) so they can reach the event sender.
+  ipcMain.handle(IpcChannels.RepoFetch, async (e, raw) => {
+    try {
+      const req = repoPathSchema.parse(raw)
+      await engine.fetch(req.path, await hosting.authForRepo(req.path), (p) => sendProgress(e, p))
+      return { ok: true, data: null }
+    } catch (err) {
+      return { ok: false, error: scrubSecrets(err instanceof Error ? err.message : String(err)) }
+    }
+  })
 
-  ipcMain.handle(
-    IpcChannels.RepoPull,
-    wrap(repoPathSchema, async (req) => {
-      await engine.pull(req.path, await hosting.authForRepo(req.path))
-      return null
-    })
-  )
+  ipcMain.handle(IpcChannels.RepoPull, async (e, raw) => {
+    try {
+      const req = repoPathSchema.parse(raw)
+      await engine.pull(req.path, await hosting.authForRepo(req.path), (p) => sendProgress(e, p))
+      return { ok: true, data: null }
+    } catch (err) {
+      return { ok: false, error: scrubSecrets(err instanceof Error ? err.message : String(err)) }
+    }
+  })
 
-  ipcMain.handle(
-    IpcChannels.RepoPush,
-    wrap(pushSchema, async (req) => {
-      await engine.push(req.path, { force: req.force }, await hosting.authForRepo(req.path))
-      return null
-    })
-  )
+  ipcMain.handle(IpcChannels.RepoPush, async (e, raw) => {
+    try {
+      const req = pushSchema.parse(raw)
+      await engine.push(
+        req.path,
+        { force: req.force },
+        await hosting.authForRepo(req.path),
+        (p) => sendProgress(e, p)
+      )
+      return { ok: true, data: null }
+    } catch (err) {
+      return { ok: false, error: scrubSecrets(err instanceof Error ? err.message : String(err)) }
+    }
+  })
 
   ipcMain.handle(
     IpcChannels.RepoMerge,
@@ -633,13 +651,17 @@ export function registerIpcHandlers(): void {
   )
 
   // Clone is handled directly (not via `wrap`) so it can stream progress on the
-  // CloneChannels.Progress channel back to the calling renderer while in flight.
+  // GitChannels.Progress channel back to the calling renderer while in flight.
   ipcMain.handle(IpcChannels.RepoClone, async (e, raw) => {
     try {
       const req = cloneSchema.parse(raw)
-      const data = await hosting.cloneRepo(req.cloneUrl, req.parentDir, req.name, req.accountId, (p) => {
-        if (!e.sender.isDestroyed()) e.sender.send(CloneChannels.Progress, p)
-      })
+      const data = await hosting.cloneRepo(
+        req.cloneUrl,
+        req.parentDir,
+        req.name,
+        req.accountId,
+        (p) => sendProgress(e, p)
+      )
       return { ok: true, data }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
