@@ -153,6 +153,43 @@ function cloneAuth(accountId: string, secret: string): engine.CloneAuth {
   return { username: 'x-access-token', password: secret }
 }
 
+const HOST_PROVIDER: Record<string, HostingProviderId> = {
+  'github.com': 'github',
+  'gitlab.com': 'gitlab',
+  'bitbucket.org': 'bitbucket'
+}
+
+/** Hostname of an https URL, or null (ssh remotes use the agent, not a token). */
+function urlHost(url: string): string | null {
+  try {
+    const u = new URL(url)
+    return u.protocol === 'https:' ? u.hostname : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * HTTPS credentials for a repo's network ops (fetch/pull/push), resolved from a
+ * connected account whose provider matches the repo's remote host. Returns
+ * undefined for ssh remotes, unknown hosts, or when no matching account is
+ * connected — then git falls back to its own credential helper / ssh-agent.
+ *
+ * This is why a token-cloned HTTPS repo can push without a system credential
+ * helper: the token is re-injected inline from the keychain for each call.
+ */
+export async function authForRepo(repoPath: string): Promise<engine.CloneAuth | undefined> {
+  const url = await engine.remoteUrl(repoPath)
+  if (!url) return undefined
+  const host = urlHost(url)
+  const provider = host ? HOST_PROVIDER[host] : undefined
+  if (!provider) return undefined
+  const account = credentials.listAccounts().find((a) => a.provider === provider)
+  if (!account) return undefined
+  const secret = credentials.getToken(account.id)
+  return secret ? cloneAuth(account.id, secret) : undefined
+}
+
 /** Clone a repo, resolving the account's token in-process (never via IPC). */
 export function cloneRepo(
   cloneUrl: string,

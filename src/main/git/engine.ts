@@ -748,14 +748,45 @@ async function defaultRemote(repoPath: string): Promise<string> {
   return remotes.includes('origin') ? 'origin' : remotes[0]
 }
 
+/** Fetch URL of the default remote, or null when there is no remote. */
+export async function remoteUrl(repoPath: string): Promise<string | null> {
+  const remotes = await runGit(['remote'], { cwd: repoPath, throwOnError: false })
+  if (!remotes.stdout.trim()) return null
+  const remote = await defaultRemote(repoPath)
+  const res = await runGit(['remote', 'get-url', remote], { cwd: repoPath, throwOnError: false })
+  return res.code === 0 ? res.stdout.trim() || null : null
+}
+
+/**
+ * `git -c …` args + env that wire an inline credential helper for one command,
+ * so HTTPS auth uses the supplied token without it ever touching argv or the
+ * saved config. Shared by clone and the network ops (fetch/pull/push) — the
+ * latter need it because a token-cloned repo has no system credential helper to
+ * fall back on (CLAUDE.md §4: secrets stay out of argv/disk).
+ */
+function inlineCredential(auth: CloneAuth): { args: string[]; env: Record<string, string> } {
+  const helper =
+    '!f() { test "$1" = get && echo "username=$CYREX_CLONE_USER" && echo "password=$CYREX_CLONE_TOKEN"; }; f'
+  return {
+    args: ['-c', 'credential.helper=', '-c', `credential.helper=${helper}`],
+    env: { CYREX_CLONE_USER: auth.username, CYREX_CLONE_TOKEN: auth.password }
+  }
+}
+
 /** Fetch all remotes and prune deleted remote-tracking branches. */
-export async function fetch(repoPath: string): Promise<void> {
-  await runGit(['fetch', '--all', '--prune'], { cwd: repoPath, timeoutMs: NETWORK_TIMEOUT })
+export async function fetch(repoPath: string, auth?: CloneAuth): Promise<void> {
+  const cred = auth ? inlineCredential(auth) : { args: [], env: undefined }
+  await runGit([...cred.args, 'fetch', '--all', '--prune'], {
+    cwd: repoPath,
+    timeoutMs: NETWORK_TIMEOUT,
+    env: cred.env
+  })
 }
 
 /** Pull the current branch from its upstream (merge per the user's git config). */
-export async function pull(repoPath: string): Promise<void> {
-  await runGit(['pull'], { cwd: repoPath, timeoutMs: NETWORK_TIMEOUT })
+export async function pull(repoPath: string, auth?: CloneAuth): Promise<void> {
+  const cred = auth ? inlineCredential(auth) : { args: [], env: undefined }
+  await runGit([...cred.args, 'pull'], { cwd: repoPath, timeoutMs: NETWORK_TIMEOUT, env: cred.env })
 }
 
 export interface PushOptions {
@@ -764,7 +795,11 @@ export interface PushOptions {
 }
 
 /** Push the current branch, setting upstream on first push. */
-export async function push(repoPath: string, opts: PushOptions = {}): Promise<void> {
+export async function push(
+  repoPath: string,
+  opts: PushOptions = {},
+  auth?: CloneAuth
+): Promise<void> {
   const branch = (
     await runGit(['symbolic-ref', '--quiet', '--short', 'HEAD'], {
       cwd: repoPath,
@@ -780,13 +815,14 @@ export async function push(repoPath: string, opts: PushOptions = {}): Promise<vo
     })
   ).stdout.trim()
 
-  const args = ['push']
+  const cred = auth ? inlineCredential(auth) : { args: [], env: undefined }
+  const args = [...cred.args, 'push']
   if (opts.force) args.push('--force-with-lease')
   if (!upstream) {
     // First push: publish the branch and set its upstream.
     args.push('-u', await defaultRemote(repoPath), 'HEAD')
   }
-  await runGit(args, { cwd: repoPath, timeoutMs: NETWORK_TIMEOUT })
+  await runGit(args, { cwd: repoPath, timeoutMs: NETWORK_TIMEOUT, env: cred.env })
 }
 
 // --- clone / link (hosting integration) -------------------------------------
@@ -871,22 +907,13 @@ export async function cloneRepo(
   const target = join(parentDir, name)
   if (existsSync(target)) throw new Error(`A folder named "${name}" already exists here.`)
 
-  const args: string[] = []
-  let env: Record<string, string> | undefined
-  if (auth) {
-    // Inline helper responds only to `get`, reading the secret from the env. The
-    // helper code is in argv but carries no secret; user/password stay in env.
-    const helper =
-      '!f() { test "$1" = get && echo "username=$CYREX_CLONE_USER" && echo "password=$CYREX_CLONE_TOKEN"; }; f'
-    args.push('-c', 'credential.helper=', '-c', `credential.helper=${helper}`)
-    env = { CYREX_CLONE_USER: auth.username, CYREX_CLONE_TOKEN: auth.password }
-  }
+  const cred = auth ? inlineCredential(auth) : { args: [], env: undefined }
   // --progress forces git to emit progress on stderr even though it isn't a TTY.
-  args.push('clone', '--progress', cloneUrl, target)
+  const args = [...cred.args, 'clone', '--progress', cloneUrl, target]
   await runGit(args, {
     cwd: parentDir,
     timeoutMs: NETWORK_TIMEOUT,
-    env,
+    env: cred.env,
     onStderr: onProgress ? cloneProgressHandler(onProgress) : undefined
   })
   onProgress?.({ phase: 'done', percent: 100 })

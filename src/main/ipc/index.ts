@@ -408,10 +408,13 @@ export function registerIpcHandlers(): void {
     })
   )
 
+  // Network ops resolve a token from a connected hosting account matching the
+  // repo's remote host, so a token-cloned HTTPS repo authenticates even with no
+  // system git credential helper (auth is undefined for ssh / unknown hosts).
   ipcMain.handle(
     IpcChannels.RepoFetch,
     wrap(repoPathSchema, async (req) => {
-      await engine.fetch(req.path)
+      await engine.fetch(req.path, await hosting.authForRepo(req.path))
       return null
     })
   )
@@ -419,7 +422,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(
     IpcChannels.RepoPull,
     wrap(repoPathSchema, async (req) => {
-      await engine.pull(req.path)
+      await engine.pull(req.path, await hosting.authForRepo(req.path))
       return null
     })
   )
@@ -427,7 +430,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(
     IpcChannels.RepoPush,
     wrap(pushSchema, async (req) => {
-      await engine.push(req.path, { force: req.force })
+      await engine.push(req.path, { force: req.force }, await hosting.authForRepo(req.path))
       return null
     })
   )
