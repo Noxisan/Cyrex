@@ -326,18 +326,32 @@ export const bitbucket: HostingProvider = {
   },
 
   async listRepos(secret: string): Promise<RemoteRepo[]> {
-    const out: RemoteRepo[] = []
-    // No server-side `sort`: Bitbucket's role-filtered aggregate /repositories
-    // endpoint rejects some sort fields with a 400, so we sort client-side below.
-    let next: string | null = '/repositories?role=member&pagelen=100'
-    // Follow Bitbucket's paginated `next` links, capped so it can't spin forever.
-    for (let page = 0; page < 10 && next; page++) {
-      const body: { values: BbRepo[]; next?: string } = await api<{
-        values: BbRepo[]
+    // The global `GET /repositories?role=` endpoint is deprecated (Bitbucket
+    // CHANGE-2770). Enumerate the user's workspaces, then list repositories
+    // within each one via the supported `/repositories/{workspace}` endpoint.
+    const slugs = new Set<string>()
+    let wnext: string | null = '/user/permissions/workspaces?pagelen=100'
+    for (let page = 0; page < 10 && wnext; page++) {
+      const body: { values: { workspace?: { slug?: string } }[]; next?: string } = await api<{
+        values: { workspace?: { slug?: string } }[]
         next?: string
-      }>(secret, next)
-      out.push(...body.values.map(toRemoteRepo))
-      next = body.next ?? null
+      }>(secret, wnext)
+      for (const m of body.values) if (m.workspace?.slug) slugs.add(m.workspace.slug)
+      wnext = body.next ?? null
+    }
+
+    const out: RemoteRepo[] = []
+    for (const slug of slugs) {
+      let next: string | null = `/repositories/${encodeURIComponent(slug)}?pagelen=100`
+      // Follow paginated `next` links, capped so a huge workspace can't spin forever.
+      for (let page = 0; page < 20 && next; page++) {
+        const body: { values: BbRepo[]; next?: string } = await api<{
+          values: BbRepo[]
+          next?: string
+        }>(secret, next)
+        out.push(...body.values.map(toRemoteRepo))
+        next = body.next ?? null
+      }
     }
     // Most-recently-updated first.
     out.sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''))
