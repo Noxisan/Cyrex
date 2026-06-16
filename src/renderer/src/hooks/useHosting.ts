@@ -60,6 +60,21 @@ export function useConnectToken() {
   )
 }
 
+export function useSetOAuthApp() {
+  return useHostingMutation(
+    (v: { provider: HostingProviderId; clientId: string; clientSecret: string }) =>
+      window.cyrex.hosting.setOAuthApp(v.provider, v.clientId, v.clientSecret),
+    ['hostingProviders']
+  )
+}
+
+export function useClearOAuthApp() {
+  return useHostingMutation(
+    (provider: HostingProviderId) => window.cyrex.hosting.clearOAuthApp(provider),
+    ['hostingProviders']
+  )
+}
+
 export function useDisconnect() {
   return useHostingMutation((id: string) => window.cyrex.hosting.disconnect(id), ['hostingAccounts'])
 }

@@ -3,7 +3,12 @@ import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, KeyRound, MonitorSmartphone } from 'lucide-react'
 import type { HostingProviderId } from '@shared/types'
-import { useConnectToken, useProviders, useSetOAuthApp } from '../hooks/useHosting'
+import {
+  useClearOAuthApp,
+  useConnectToken,
+  useProviders,
+  useSetOAuthApp
+} from '../hooks/useHosting'
 import { ProviderIcon } from './BrandIcon'
 
 // Loopback callback the Bitbucket OAuth consumer must be registered with (matches
@@ -30,6 +35,7 @@ export function ConnectWizard({ onClose }: { onClose: () => void }): React.JSX.E
   const { data: providers } = useProviders()
   const connectToken = useConnectToken()
   const setOAuthApp = useSetOAuthApp()
+  const clearOAuthApp = useClearOAuthApp()
 
   const [provider, setProvider] = useState<HostingProviderId | null>(null)
   const [mode, setMode] = useState<'choose' | 'device' | 'token' | 'oauthSetup'>('choose')
@@ -169,6 +175,21 @@ export function ConnectWizard({ onClose }: { onClose: () => void }): React.JSX.E
               <KeyRound size={15} strokeWidth={1.75} />
               {t(canBrowserLogin(provider) ? 'hosting.useToken' : 'hosting.useTokenOnly')}
             </button>
+            {/* Re-enter the OAuth consumer (e.g. to switch to a new app). Only
+                meaningful once one is already stored — otherwise "Log in with
+                browser" already routes through setup. */}
+            {oauthConfigurable(provider) && deviceFlow(provider) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setProvider(provider)
+                  setMode('oauthSetup')
+                }}
+                className="mt-0.5 self-start text-[11px] text-fg-subtle underline-offset-2 hover:text-fg hover:underline"
+              >
+                {t('hosting.changeOAuthApp')}
+              </button>
+            )}
           </div>
         )}
 
@@ -256,22 +277,40 @@ export function ConnectWizard({ onClose }: { onClose: () => void }): React.JSX.E
           }}
           className="mb-4 w-full rounded-[var(--radius-card)] border border-border bg-bg px-2 py-1.5 font-mono text-xs text-fg outline-none focus:border-accent"
         />
-        <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => setMode('choose')}
-            className="rounded-[var(--radius-card)] px-3 py-1.5 text-xs text-fg-muted hover:bg-surface-2 hover:text-fg"
-          >
-            {t('common.cancel')}
-          </button>
-          <button
-            type="button"
-            onClick={saveOAuthApp}
-            disabled={!oauthId.trim() || !oauthSecret.trim() || setOAuthApp.isPending}
-            className="rounded-[var(--radius-card)] bg-accent px-3 py-1.5 text-xs font-medium text-accent-fg hover:bg-accent-hover disabled:opacity-40"
-          >
-            {t('hosting.oauthSaveLogin')}
-          </button>
+        <div className="flex items-center justify-between gap-2">
+          {/* Forget an already-stored consumer (e.g. before switching apps). */}
+          {provider && deviceFlow(provider) ? (
+            <button
+              type="button"
+              onClick={() => {
+                if (!provider) return
+                clearOAuthApp.mutate(provider, { onSuccess: () => setMode('choose') })
+              }}
+              disabled={clearOAuthApp.isPending}
+              className="text-[11px] text-fg-subtle underline-offset-2 hover:text-danger hover:underline disabled:opacity-40"
+            >
+              {t('hosting.removeOAuthApp')}
+            </button>
+          ) : (
+            <span />
+          )}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setMode('choose')}
+              className="rounded-[var(--radius-card)] px-3 py-1.5 text-xs text-fg-muted hover:bg-surface-2 hover:text-fg"
+            >
+              {t('common.cancel')}
+            </button>
+            <button
+              type="button"
+              onClick={saveOAuthApp}
+              disabled={!oauthId.trim() || !oauthSecret.trim() || setOAuthApp.isPending}
+              className="rounded-[var(--radius-card)] bg-accent px-3 py-1.5 text-xs font-medium text-accent-fg hover:bg-accent-hover disabled:opacity-40"
+            >
+              {t('hosting.oauthSaveLogin')}
+            </button>
+          </div>
         </div>
       </div>
     )
