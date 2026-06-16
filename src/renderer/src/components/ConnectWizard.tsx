@@ -43,7 +43,15 @@ export function ConnectWizard({ onClose }: { onClose: () => void }): React.JSX.E
   const [status, setStatus] = useState<string | null>(null)
   const cancelled = useRef(false)
 
-  useEffect(() => () => void (cancelled.current = true), [])
+  // Reset on mount and set on unmount. The reset matters under React StrictMode,
+  // whose mount→unmount→mount cycle would otherwise leave `cancelled` stuck true
+  // (from the first cleanup) and silently kill the device-login poll loop.
+  useEffect(() => {
+    cancelled.current = false
+    return () => {
+      cancelled.current = true
+    }
+  }, [])
 
   const deviceFlow = (id: HostingProviderId): boolean =>
     providers?.find((p) => p.id === id)?.deviceFlow ?? false

@@ -68,10 +68,33 @@ export function gitAuth(secret: string): { username: string; password: string } 
   return { username: 'x-token-auth', password: secret }
 }
 
+/**
+ * fetch with an abort timeout. Without it a stalled host (e.g. api.bitbucket.org
+ * behind a proxy/firewall that differs from bitbucket.org) would hang the login
+ * poll forever — the renderer would sit on "Waiting…" with no error.
+ */
+async function fetchWithTimeout(url: string, init: RequestInit, ms = 20_000): Promise<Response> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), ms)
+  try {
+    return await fetch(url, { ...init, signal: controller.signal })
+  } catch (e) {
+    if ((e as Error).name === 'AbortError') {
+      throw new Error(
+        `Bitbucket did not respond within ${ms / 1000}s. Check your connection (and any proxy/firewall) and try again.`,
+        { cause: e }
+      )
+    }
+    throw e
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 /** Authenticated Bitbucket REST call returning parsed JSON, throwing on failure. */
 async function api<T>(secret: string, path: string, init?: RequestInit): Promise<T> {
   const url = path.startsWith('http') ? path : `${API}${path}`
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     ...init,
     headers: {
       Accept: 'application/json',
@@ -151,7 +174,7 @@ function listen(server: Server, port: number): Promise<void> {
 
 /** Exchange an authorization code for a bearer access token (confidential client). */
 async function exchangeCode(code: string): Promise<string> {
-  const res = await fetch(TOKEN_URL, {
+  const res = await fetchWithTimeout(TOKEN_URL, {
     method: 'POST',
     headers: {
       Accept: 'application/json',
