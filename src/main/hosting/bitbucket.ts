@@ -100,9 +100,14 @@ async function api<T>(secret: string, path: string, init?: RequestInit): Promise
             'and connect as email:api_token (your Atlassian account email, not your Bitbucket username).'
         )
       }
+      // Not the `email:api_token` shape — most often a bare token pasted without
+      // the email prefix (Atlassian API tokens don't authenticate as a bearer),
+      // or an expired browser-login token. Guide both cases.
       throw new Error(
-        `Bitbucket rejected the login (${res.status}${detail ? `: ${detail}` : ''}). ` +
-          'Please reconnect your Bitbucket account.'
+        `Bitbucket rejected the credentials (${res.status}${detail ? `: ${detail}` : ''}). ` +
+          'If you pasted a token, paste it as email:api_token (your Atlassian account email ' +
+          'and an API token from id.atlassian.com with read:user:bitbucket + read:repository:bitbucket ' +
+          'scopes). If you used browser login, reconnect your Bitbucket account.'
       )
     }
     throw new Error(`Bitbucket API error ${res.status}${detail ? `: ${detail}` : ''}`)
@@ -279,14 +284,19 @@ export const bitbucket: HostingProvider = {
 
   async validateToken(secret: string): Promise<HostingAccount> {
     const u = await api<{
-      username: string
+      username?: string
+      nickname?: string
+      account_id?: string
       display_name: string | null
       links: { avatar?: { href: string } }
     }>(secret, '/user')
+    // Atlassian is phasing out `username`; fall back so the account is still
+    // usable (and never becomes `bitbucket:undefined`).
+    const login = u.username ?? u.nickname ?? u.account_id ?? 'bitbucket'
     return {
-      id: `bitbucket:${u.username}`,
+      id: `bitbucket:${login}`,
       provider: 'bitbucket',
-      login: u.username,
+      login,
       name: u.display_name,
       avatarUrl: u.links.avatar?.href ?? null
     }
