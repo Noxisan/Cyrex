@@ -326,18 +326,26 @@ export const bitbucket: HostingProvider = {
   },
 
   async listRepos(secret: string): Promise<RemoteRepo[]> {
-    // Bitbucket CHANGE-2770 removed the cross-workspace endpoints — both the
-    // global `GET /repositories` and `GET /user/permissions/workspaces` (they
-    // return 410 Gone). Enumerate the user's workspaces via the supported
-    // `GET /workspaces`, then list repos within each via `/repositories/{ws}`.
+    // Bitbucket CHANGE-2770 removed the cross-workspace listing endpoints
+    // (GET /repositories, /user/permissions/workspaces, and /workspaces all
+    // return 410 Gone). The supported replacement (CHANGE-3022) is
+    // GET /user/workspaces; we then list repos per workspace via
+    // /repositories/{workspace}. Requires the "Workspace membership: Read" scope.
     const slugs = new Set<string>()
-    let wnext: string | null = '/workspaces?pagelen=100'
+    let wnext: string | null = '/user/workspaces?pagelen=100'
     for (let page = 0; page < 10 && wnext; page++) {
-      const body: { values: { slug?: string }[]; next?: string } = await api<{
-        values: { slug?: string }[]
+      // Tolerate either a workspace object ({slug}) or a membership ({workspace:{slug}}).
+      const body: {
+        values: { slug?: string; workspace?: { slug?: string } }[]
+        next?: string
+      } = await api<{
+        values: { slug?: string; workspace?: { slug?: string } }[]
         next?: string
       }>(secret, wnext)
-      for (const w of body.values) if (w.slug) slugs.add(w.slug)
+      for (const w of body.values) {
+        const slug = w.slug ?? w.workspace?.slug
+        if (slug) slugs.add(slug)
+      }
       wnext = body.next ?? null
     }
 
