@@ -33,7 +33,12 @@ export function OpenRepoDialog(): React.JSX.Element | null {
   const [selected, setSelected] = useState<string | null>(null)
 
   const activeAccount = accountId ?? accounts?.[0]?.id ?? null
-  const { data: remoteRepos, isLoading } = useRemoteRepos(open ? activeAccount : null)
+  const {
+    data: remoteRepos,
+    isLoading,
+    error: reposError,
+    refetch: refetchRepos
+  } = useRemoteRepos(open ? activeAccount : null)
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -210,7 +215,22 @@ export function OpenRepoDialog(): React.JSX.Element | null {
                         {t('hosting.loading')}
                       </p>
                     )}
-                    {!isLoading && filtered.length === 0 && (
+                    {!isLoading && reposError && (
+                      <div className="flex flex-col items-center gap-2 px-3 py-6 text-center">
+                        <p className="text-xs font-medium text-danger">{t('hosting.reposError')}</p>
+                        <p className="max-w-md text-[11px] leading-relaxed text-fg-muted">
+                          {(reposError as Error).message}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => void refetchRepos()}
+                          className="mt-1 rounded-[var(--radius-card)] border border-border px-2 py-1 text-[11px] text-fg-muted hover:bg-surface-2 hover:text-fg"
+                        >
+                          {t('hosting.retry')}
+                        </button>
+                      </div>
+                    )}
+                    {!isLoading && !reposError && filtered.length === 0 && (
                       <p className="px-3 py-6 text-center text-xs text-fg-subtle">
                         {t('hosting.noRepos')}
                       </p>
