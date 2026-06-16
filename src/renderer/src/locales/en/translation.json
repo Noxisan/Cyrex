@@ -72,6 +72,13 @@
     "retry": "Retry",
     "cloning": "Cloning…",
     "cloned": "Cloned {{name}}",
+    "clonePhase": {
+      "counting": "Counting objects…",
+      "compressing": "Compressing…",
+      "receiving": "Receiving objects",
+      "resolving": "Resolving deltas",
+      "done": "Finishing…"
+    },
     "createTitle": "Create a repository",
     "repoName": "Repository name",
     "repoDescription": "Description (optional)",

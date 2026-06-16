@@ -47,6 +47,11 @@ export interface GitRunOptions {
    * todo list for `rebase -i` via GIT_SEQUENCE_EDITOR.
    */
   env?: Record<string, string>
+  /**
+   * Called with each raw stderr chunk as it arrives (in addition to buffering).
+   * Used to stream live progress, e.g. `git clone --progress`.
+   */
+  onStderr?: (chunk: string) => void
 }
 
 export interface GitRunResult {
@@ -60,7 +65,7 @@ export interface GitRunResult {
  * walks, big diffs) prefer a streaming variant — added as the engine grows.
  */
 export function runGit(args: string[], opts: GitRunOptions = {}): Promise<GitRunResult> {
-  const { cwd, timeoutMs = 30_000, throwOnError = true, input, env } = opts
+  const { cwd, timeoutMs = 30_000, throwOnError = true, input, env, onStderr } = opts
 
   return new Promise((resolve, reject) => {
     const child = spawn('git', args, {
@@ -101,7 +106,10 @@ export function runGit(args: string[], opts: GitRunOptions = {}): Promise<GitRun
     child.stdout.setEncoding('utf8')
     child.stderr.setEncoding('utf8')
     child.stdout.on('data', (d: string) => (stdout += d))
-    child.stderr.on('data', (d: string) => (stderr += d))
+    child.stderr.on('data', (d: string) => {
+      stderr += d
+      onStderr?.(d)
+    })
 
     child.on('error', (err) => {
       if (settled) return

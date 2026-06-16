@@ -5,9 +5,10 @@
  */
 
 import { contextBridge, ipcRenderer } from 'electron'
-import { IpcChannels, TerminalChannels, WindowChannels } from '@shared/ipc'
+import { CloneChannels, IpcChannels, TerminalChannels, WindowChannels } from '@shared/ipc'
 import type { IpcApi } from '@shared/ipc'
 import type {
+  CloneProgress,
   DiffSource,
   HostingProviderId,
   RebaseTodoItem,
@@ -130,6 +131,12 @@ export const cyrexApi = {
   pickDirectory: () => invoke(IpcChannels.PickDirectory),
   cloneRepo: (cloneUrl: string, parentDir: string, name: string, accountId?: string) =>
     invoke(IpcChannels.RepoClone, { cloneUrl, parentDir, name, accountId }),
+  /** Subscribe to clone progress while a cloneRepo call is in flight. */
+  onCloneProgress: (cb: (p: CloneProgress) => void): (() => void) => {
+    const listener = (_e: unknown, p: CloneProgress): void => cb(p)
+    ipcRenderer.on(CloneChannels.Progress, listener)
+    return () => ipcRenderer.removeListener(CloneChannels.Progress, listener)
+  },
   setRemote: (path: string, url: string, name?: string) =>
     invoke(IpcChannels.RepoSetRemote, { path, url, name }),
 
@@ -146,6 +153,10 @@ export const cyrexApi = {
     pollLogin: (handle: string) => invoke(IpcChannels.HostingPollLogin, { handle }),
     connectToken: (provider: HostingProviderId, token: string) =>
       invoke(IpcChannels.HostingConnectToken, { provider, token }),
+    setOAuthApp: (provider: HostingProviderId, clientId: string, clientSecret: string) =>
+      invoke(IpcChannels.HostingSetOAuthApp, { provider, clientId, clientSecret }),
+    clearOAuthApp: (provider: HostingProviderId) =>
+      invoke(IpcChannels.HostingClearOAuthApp, { provider }),
     disconnect: (id: string) => invoke(IpcChannels.HostingDisconnect, { id }),
     listRepos: (accountId: string) => invoke(IpcChannels.HostingListRepos, { accountId }),
     createRepo: (

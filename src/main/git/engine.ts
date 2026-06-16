@@ -13,6 +13,7 @@ import { existsSync } from 'node:fs'
 import type {
   BlameLine,
   Branch,
+  CloneProgress,
   Commit,
   CommitContext,
   CommitDiff,
@@ -808,8 +809,8 @@ function httpsHost(url: string): string | null {
 
 /**
  * HTTPS credentials for clone/auth. `username` varies by provider:
- * `x-access-token` (GitHub), `oauth2` (GitLab token), or the account username
- * (Bitbucket app password). The secret is always carried in `password`.
+ * `x-access-token` (GitHub), `oauth2` (GitLab token), or
+ * `x-bitbucket-api-token-auth` (Bitbucket API token). The secret is always carried in `password`.
  */
 export interface CloneAuth {
   username: string
@@ -826,16 +827,46 @@ async function approveCredential(host: string, auth: CloneAuth): Promise<void> {
   }
 }
 
+/** Parse one `git clone --progress` stderr line into a CloneProgress, or null. */
+function parseCloneLine(line: string): CloneProgress | null {
+  let m: RegExpMatchArray | null
+  if ((m = line.match(/Receiving objects:\s+(\d+)%/))) return { phase: 'receiving', percent: +m[1] }
+  if ((m = line.match(/Resolving deltas:\s+(\d+)%/))) return { phase: 'resolving', percent: +m[1] }
+  if ((m = line.match(/Compressing objects:\s+(\d+)%/)))
+    return { phase: 'compressing', percent: +m[1] }
+  if (/Counting objects/.test(line)) return { phase: 'counting', percent: null }
+  return null
+}
+
+/**
+ * Build a stderr handler that splits git's progress stream (lines end in \r as
+ * git overwrites the same line) and forwards parsed progress. Keeps a tail so a
+ * chunk that splits mid-line isn't mis-parsed.
+ */
+function cloneProgressHandler(onProgress: (p: CloneProgress) => void): (chunk: string) => void {
+  let tail = ''
+  return (chunk) => {
+    const parts = (tail + chunk).split(/[\r\n]/)
+    tail = parts.pop() ?? ''
+    for (const line of parts) {
+      const p = parseCloneLine(line)
+      if (p) onProgress(p)
+    }
+  }
+}
+
 /**
  * Clone `cloneUrl` into `parentDir/name` and return the new RepoRef. When `auth`
  * is given (private repo), it authenticates via an inline credential helper fed
- * through the environment — never argv, never the saved config.
+ * through the environment — never argv, never the saved config. `onProgress`
+ * receives parsed `git clone --progress` updates.
  */
 export async function cloneRepo(
   cloneUrl: string,
   parentDir: string,
   name: string,
-  auth?: CloneAuth
+  auth?: CloneAuth,
+  onProgress?: (p: CloneProgress) => void
 ): Promise<RepoRef> {
   const target = join(parentDir, name)
   if (existsSync(target)) throw new Error(`A folder named "${name}" already exists here.`)
@@ -850,8 +881,15 @@ export async function cloneRepo(
     args.push('-c', 'credential.helper=', '-c', `credential.helper=${helper}`)
     env = { CYREX_CLONE_USER: auth.username, CYREX_CLONE_TOKEN: auth.password }
   }
-  args.push('clone', cloneUrl, target)
-  await runGit(args, { cwd: parentDir, timeoutMs: NETWORK_TIMEOUT, env })
+  // --progress forces git to emit progress on stderr even though it isn't a TTY.
+  args.push('clone', '--progress', cloneUrl, target)
+  await runGit(args, {
+    cwd: parentDir,
+    timeoutMs: NETWORK_TIMEOUT,
+    env,
+    onStderr: onProgress ? cloneProgressHandler(onProgress) : undefined
+  })
+  onProgress?.({ phase: 'done', percent: 100 })
 
   const host = httpsHost(cloneUrl)
   if (auth && host) await approveCredential(host, auth)

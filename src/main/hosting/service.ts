@@ -8,6 +8,7 @@
 import { randomUUID } from 'node:crypto'
 import { shell } from 'electron'
 import type {
+  CloneProgress,
   CreateRepoInput,
   DeviceLoginStart,
   DeviceLoginStatus,
@@ -18,6 +19,7 @@ import type {
 } from '@shared/types'
 import * as credentials from '../credentials'
 import * as engine from '../git/engine'
+import { gitAuth as bitbucketGitAuth } from './bitbucket'
 import { availableProviders, getProvider } from './index'
 
 interface LoginSession {
@@ -30,12 +32,35 @@ const sessions = new Map<string, LoginSession>()
 
 export interface ProviderInfo {
   id: HostingProviderId
+  /** Browser login available right now (an OAuth app is configured). */
   deviceFlow: boolean
+  /** The user can supply an OAuth app in-app to unlock browser login. */
+  oauthConfigurable: boolean
 }
 
-/** Wired providers and whether each offers device-flow login right now. */
+/** Wired providers, whether each can log in via the browser, and how to enable it. */
 export function providers(): ProviderInfo[] {
-  return availableProviders().map((id) => ({ id, deviceFlow: getProvider(id).supportsDeviceFlow() }))
+  return availableProviders().map((id) => {
+    const p = getProvider(id)
+    return { id, deviceFlow: p.supportsDeviceFlow(), oauthConfigurable: p.oauthConfigurable() }
+  })
+}
+
+/** Store a user-entered OAuth app (client id/secret) so browser login can be used. */
+export function setOAuthApp(
+  providerId: HostingProviderId,
+  clientId: string,
+  clientSecret: string
+): void {
+  if (!getProvider(providerId).oauthConfigurable()) {
+    throw new Error('This provider does not support setting up an OAuth app in the app.')
+  }
+  credentials.saveOAuthApp(providerId, clientId.trim(), clientSecret.trim())
+}
+
+/** Forget a provider's stored OAuth app. */
+export function clearOAuthApp(providerId: HostingProviderId): void {
+  credentials.clearOAuthApp(providerId)
 }
 
 export function listAccounts(): HostingAccount[] {
@@ -118,16 +143,12 @@ export function createRepo(accountId: string, input: CreateRepoInput): Promise<R
 
 /**
  * Map a provider's stored secret to git HTTPS credentials. GitHub uses a fixed
- * `x-access-token` user, GitLab `oauth2`, and Bitbucket the `username:app_password`
- * pair the user pasted (so the username travels with the secret).
+ * `x-access-token` user, GitLab `oauth2`. Bitbucket's git username depends on the
+ * token type (OAuth bearer vs pasted API token), so its adapter derives it.
  */
 function cloneAuth(accountId: string, secret: string): engine.CloneAuth {
   const provider = providerOf(accountId)
-  if (provider === 'bitbucket') {
-    const i = secret.indexOf(':')
-    if (i > 0) return { username: secret.slice(0, i), password: secret.slice(i + 1) }
-    return { username: accountId.split(':')[1] ?? 'x-token-auth', password: secret }
-  }
+  if (provider === 'bitbucket') return bitbucketGitAuth(secret)
   if (provider === 'gitlab') return { username: 'oauth2', password: secret }
   return { username: 'x-access-token', password: secret }
 }
@@ -137,9 +158,10 @@ export function cloneRepo(
   cloneUrl: string,
   parentDir: string,
   name: string,
-  accountId?: string
+  accountId?: string,
+  onProgress?: (p: CloneProgress) => void
 ): Promise<RepoRef> {
   const secret = accountId ? credentials.getToken(accountId) : null
   const auth = accountId && secret ? cloneAuth(accountId, secret) : undefined
-  return engine.cloneRepo(cloneUrl, parentDir, name, auth)
+  return engine.cloneRepo(cloneUrl, parentDir, name, auth, onProgress)
 }

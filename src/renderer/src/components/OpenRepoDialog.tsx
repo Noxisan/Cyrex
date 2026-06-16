@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CloudOff, FilePlus2, FolderOpen, Lock, Plus, Search } from 'lucide-react'
+import type { CloneProgress } from '@shared/types'
 import { useRepoStore } from '../store/repoStore'
 import { useAccounts, useCloneRepo, useDisconnect, useRemoteRepos } from '../hooks/useHosting'
 import { useToastStore } from '../store/toastStore'
@@ -31,6 +32,10 @@ export function OpenRepoDialog(): React.JSX.Element | null {
   const [accountId, setAccountId] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState<string | null>(null)
+  const [cloneProgress, setCloneProgress] = useState<CloneProgress | null>(null)
+
+  // Stream clone progress from the main process while a clone is in flight.
+  useEffect(() => window.cyrex.onCloneProgress((p) => setCloneProgress(p)), [])
 
   const activeAccount = accountId ?? accounts?.[0]?.id ?? null
   const {
@@ -63,6 +68,7 @@ export function OpenRepoDialog(): React.JSX.Element | null {
     if (!chosen || !activeAccount) return
     const dir = await window.cyrex.pickDirectory()
     if (!dir.ok || !dir.data) return
+    setCloneProgress(null)
     clone.mutate(
       { cloneUrl: chosen.cloneUrl, parentDir: dir.data, name: chosen.name, accountId: activeAccount },
       {
@@ -261,12 +267,30 @@ export function OpenRepoDialog(): React.JSX.Element | null {
                     ))}
                   </div>
 
-                  <div className="mt-3 flex justify-end">
+                  <div className="mt-3 flex items-center gap-3">
+                    {clone.isPending && (
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-1 flex justify-between text-[10px] text-fg-subtle">
+                          <span>
+                            {cloneProgress
+                              ? t(`hosting.clonePhase.${cloneProgress.phase}`)
+                              : t('hosting.cloning')}
+                          </span>
+                          {cloneProgress?.percent != null && <span>{cloneProgress.percent}%</span>}
+                        </div>
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
+                          <div
+                            className="h-full rounded-full bg-accent transition-[width] duration-150"
+                            style={{ width: `${cloneProgress?.percent ?? 8}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
                     <button
                       type="button"
                       onClick={cloneChosen}
                       disabled={!chosen || clone.isPending}
-                      className="rounded-[var(--radius-card)] bg-accent px-3 py-1.5 text-xs font-medium text-accent-fg hover:bg-accent-hover disabled:opacity-40"
+                      className="ms-auto shrink-0 rounded-[var(--radius-card)] bg-accent px-3 py-1.5 text-xs font-medium text-accent-fg hover:bg-accent-hover disabled:opacity-40"
                     >
                       {clone.isPending ? t('hosting.cloning') : t('hosting.clone')}
                     </button>

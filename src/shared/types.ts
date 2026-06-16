@@ -13,6 +13,14 @@ export interface RepoRef {
   name: string
 }
 
+/** Streamed progress of a clone, parsed from `git clone --progress` stderr. */
+export interface CloneProgress {
+  /** The current git phase; `done` is sent when the clone completes. */
+  phase: 'counting' | 'compressing' | 'receiving' | 'resolving' | 'done'
+  /** Percent (0–100) of the current phase, or null when indeterminate. */
+  percent: number | null
+}
+
 export type FileStatusCode =
   | 'added'
   | 'modified'

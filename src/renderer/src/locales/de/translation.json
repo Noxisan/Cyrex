@@ -72,6 +72,13 @@
     "retry": "Erneut versuchen",
     "cloning": "Wird geklont…",
     "cloned": "{{name}} geklont",
+    "clonePhase": {
+      "counting": "Objekte zählen…",
+      "compressing": "Komprimieren…",
+      "receiving": "Objekte empfangen",
+      "resolving": "Deltas auflösen",
+      "done": "Abschließen…"
+    },
     "createTitle": "Repository erstellen",
     "repoName": "Repository-Name",
     "repoDescription": "Beschreibung (optional)",

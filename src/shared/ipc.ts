@@ -144,6 +144,10 @@ export const IpcChannels = {
   HostingPollLogin: 'hosting:pollLogin',
   /** Connect by pasting a personal access token. */
   HostingConnectToken: 'hosting:connectToken',
+  /** Store a user-entered OAuth app (client id/secret) to enable browser login. */
+  HostingSetOAuthApp: 'hosting:setOAuthApp',
+  /** Forget a provider's stored OAuth app. */
+  HostingClearOAuthApp: 'hosting:clearOAuthApp',
   /** Forget an account and its token. */
   HostingDisconnect: 'hosting:disconnect',
   /** List an account's repositories (metadata only). */
@@ -171,6 +175,15 @@ export const TerminalChannels = {
   Dispose: 'terminal:dispose',
   Data: 'terminal:data',
   Exit: 'terminal:exit'
+} as const
+
+/**
+ * Clone progress. A main→renderer stream emitted while a `RepoClone` invocation
+ * is in flight, so it is kept out of the request/response IpcApi map (like the
+ * terminal streams). The renderer subscribes via the preload bridge.
+ */
+export const CloneChannels = {
+  Progress: 'clone:progress'
 } as const
 
 /**
@@ -466,7 +479,9 @@ export interface IpcApi {
   }
   [IpcChannels.HostingProviders]: {
     request: void
-    response: EngineResult<{ id: HostingProviderId; deviceFlow: boolean }[]>
+    response: EngineResult<
+      { id: HostingProviderId; deviceFlow: boolean; oauthConfigurable: boolean }[]
+    >
   }
   [IpcChannels.HostingListAccounts]: {
     request: void
@@ -483,6 +498,14 @@ export interface IpcApi {
   [IpcChannels.HostingConnectToken]: {
     request: { provider: HostingProviderId; token: string }
     response: EngineResult<HostingAccount>
+  }
+  [IpcChannels.HostingSetOAuthApp]: {
+    request: { provider: HostingProviderId; clientId: string; clientSecret: string }
+    response: EngineResult<null>
+  }
+  [IpcChannels.HostingClearOAuthApp]: {
+    request: { provider: HostingProviderId }
+    response: EngineResult<null>
   }
   [IpcChannels.HostingDisconnect]: {
     request: { id: string }

@@ -8,7 +8,7 @@
 
 import { BrowserWindow, dialog, ipcMain } from 'electron'
 import type { ZodType } from 'zod'
-import { IpcChannels } from '@shared/ipc'
+import { CloneChannels, IpcChannels } from '@shared/ipc'
 import type { EngineResult, RepoRef } from '@shared/types'
 import * as engine from '../git/engine'
 import * as hosting from '../hosting/service'
@@ -18,11 +18,13 @@ import {
   addIgnoreSchema,
   applyPartialSchema,
   cloneSchema,
+  hostingClearOAuthAppSchema,
   hostingConnectTokenSchema,
   hostingCreateRepoSchema,
   hostingDisconnectSchema,
   hostingListReposSchema,
   hostingPollLoginSchema,
+  hostingSetOAuthAppSchema,
   hostingStartLoginSchema,
   imageVersionsSchema,
   setRemoteSchema,
@@ -588,6 +590,22 @@ export function registerIpcHandlers(): void {
   )
 
   ipcMain.handle(
+    IpcChannels.HostingSetOAuthApp,
+    wrap(hostingSetOAuthAppSchema, async (req) => {
+      hosting.setOAuthApp(req.provider, req.clientId, req.clientSecret)
+      return null
+    })
+  )
+
+  ipcMain.handle(
+    IpcChannels.HostingClearOAuthApp,
+    wrap(hostingClearOAuthAppSchema, async (req) => {
+      hosting.clearOAuthApp(req.provider)
+      return null
+    })
+  )
+
+  ipcMain.handle(
     IpcChannels.HostingDisconnect,
     wrap(hostingDisconnectSchema, async (req) => {
       hosting.disconnect(req.id)
@@ -611,12 +629,20 @@ export function registerIpcHandlers(): void {
     )
   )
 
-  ipcMain.handle(
-    IpcChannels.RepoClone,
-    wrap(cloneSchema, (req) =>
-      hosting.cloneRepo(req.cloneUrl, req.parentDir, req.name, req.accountId)
-    )
-  )
+  // Clone is handled directly (not via `wrap`) so it can stream progress on the
+  // CloneChannels.Progress channel back to the calling renderer while in flight.
+  ipcMain.handle(IpcChannels.RepoClone, async (e, raw) => {
+    try {
+      const req = cloneSchema.parse(raw)
+      const data = await hosting.cloneRepo(req.cloneUrl, req.parentDir, req.name, req.accountId, (p) => {
+        if (!e.sender.isDestroyed()) e.sender.send(CloneChannels.Progress, p)
+      })
+      return { ok: true, data }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      return { ok: false, error: scrubSecrets(message) }
+    }
+  })
 
   ipcMain.handle(
     IpcChannels.RepoSetRemote,
