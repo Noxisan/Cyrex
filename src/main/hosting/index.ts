@@ -1,7 +1,7 @@
 /**
  * Provider registry. All three adapters share the same HostingProvider
  * interface; GitHub and GitLab offer OAuth device flow (when a client id is
- * configured) plus token paste, Bitbucket is token paste (app password) only.
+ * configured) plus token paste, Bitbucket is token paste (API token) only.
  */
 
 import type { HostingProviderId } from '@shared/types'

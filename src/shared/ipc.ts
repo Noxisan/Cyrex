@@ -23,6 +23,8 @@ import type {
   IdentityInfo,
   LfsStatus,
   LogOptions,
+  PullRequest,
+  PullRequestList,
   RebaseResult,
   RebaseTodoItem,
   ReflogEntry,
@@ -160,6 +162,10 @@ export const IpcChannels = {
   HostingListRepos: 'hosting:listRepos',
   /** Create a repository on the provider. */
   HostingCreateRepo: 'hosting:createRepo',
+  /** List open pull/merge requests for the active repo's remote. */
+  HostingListPullRequests: 'hosting:listPullRequests',
+  /** Open a pull/merge request from the active repo's connected account. */
+  HostingCreatePullRequest: 'hosting:createPullRequest',
   /** Clone a repo; the account's token is resolved in-process, not via IPC. */
   RepoClone: 'repo:clone',
   /** Point a repo's remote at a URL (link to a created remote). */
@@ -540,6 +546,21 @@ export interface IpcApi {
   [IpcChannels.HostingCreateRepo]: {
     request: { accountId: string; name: string; description?: string; private: boolean }
     response: EngineResult<RemoteRepo>
+  }
+  [IpcChannels.HostingListPullRequests]: {
+    request: { path: string }
+    response: EngineResult<PullRequestList>
+  }
+  [IpcChannels.HostingCreatePullRequest]: {
+    request: {
+      path: string
+      title: string
+      body?: string
+      sourceBranch: string
+      targetBranch: string
+      draft?: boolean
+    }
+    response: EngineResult<PullRequest>
   }
   [IpcChannels.RepoClone]: {
     request: { cloneUrl: string; parentDir: string; name: string; accountId?: string }

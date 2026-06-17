@@ -14,7 +14,7 @@
 import { app, safeStorage } from 'electron'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import type { HostingAccount } from '@shared/types'
+import type { HostingAccount, HostingProviderId } from '@shared/types'
 
 interface StoredAccount extends HostingAccount {
   /** Base64 of the safeStorage-encrypted access token. */
@@ -89,4 +89,75 @@ export function listAccounts(): HostingAccount[] {
 export function deleteAccount(id: string): void {
   const vault = readVault()
   writeVault({ accounts: vault.accounts.filter((a) => a.id !== id) })
+}
+
+// ── OAuth app (consumer) credentials ────────────────────────────────────────
+// Some providers (Bitbucket) need a registered OAuth app's client id + secret
+// before browser login works. Users paste these once; we encrypt the secret with
+// safeStorage just like account tokens and keep them out of the renderer.
+
+interface StoredOAuthApp {
+  clientId: string
+  /** Base64 of the safeStorage-encrypted client secret. */
+  secret: string
+}
+
+type OAuthAppFile = Partial<Record<HostingProviderId, StoredOAuthApp>>
+
+function oauthPath(): string {
+  return join(app.getPath('userData'), 'oauth-apps.json')
+}
+
+function readOAuthApps(): OAuthAppFile {
+  try {
+    const p = oauthPath()
+    if (!existsSync(p)) return {}
+    return JSON.parse(readFileSync(p, 'utf-8')) as OAuthAppFile
+  } catch {
+    return {}
+  }
+}
+
+/** Store an OAuth app's client id + secret (encrypted) for a provider. */
+export function saveOAuthApp(
+  provider: HostingProviderId,
+  clientId: string,
+  clientSecret: string
+): void {
+  if (!isAvailable()) {
+    throw new Error(
+      'Secure storage is unavailable on this system, so the OAuth secret cannot be saved safely.'
+    )
+  }
+  const apps = readOAuthApps()
+  apps[provider] = {
+    clientId,
+    secret: safeStorage.encryptString(clientSecret).toString('base64')
+  }
+  writeFileSync(oauthPath(), JSON.stringify(apps, null, 2), { mode: 0o600 })
+}
+
+/** Decrypted OAuth app credentials for a provider, or null if none/undecryptable. */
+export function getOAuthApp(
+  provider: HostingProviderId
+): { clientId: string; clientSecret: string } | null {
+  const stored = readOAuthApps()[provider]
+  if (!stored) return null
+  try {
+    return {
+      clientId: stored.clientId,
+      clientSecret: safeStorage.decryptString(Buffer.from(stored.secret, 'base64'))
+    }
+  } catch {
+    return null
+  }
+}
+
+/** Forget a provider's stored OAuth app. */
+export function clearOAuthApp(provider: HostingProviderId): void {
+  const apps = readOAuthApps()
+  if (apps[provider]) {
+    delete apps[provider]
+    writeFileSync(oauthPath(), JSON.stringify(apps, null, 2), { mode: 0o600 })
+  }
 }

@@ -5,7 +5,12 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { CreateRepoInput, EngineResult, HostingProviderId } from '@shared/types'
+import type {
+  CreatePullRequestInput,
+  CreateRepoInput,
+  EngineResult,
+  HostingProviderId
+} from '@shared/types'
 import { useToastStore } from '../store/toastStore'
 
 function unwrap<T>(res: EngineResult<T>): T {
@@ -91,5 +96,22 @@ export function useCloneRepo() {
   return useHostingMutation(
     (v: { cloneUrl: string; parentDir: string; name: string; accountId?: string }) =>
       window.cyrex.cloneRepo(v.cloneUrl, v.parentDir, v.name, v.accountId)
+  )
+}
+
+/** Open pull/merge requests for the active repo (or a benign no-account state). */
+export function usePullRequests(path: string | null, enabled = true) {
+  return useQuery({
+    queryKey: ['pullRequests', path],
+    enabled: !!path && enabled,
+    staleTime: 30_000,
+    queryFn: async () => unwrap(await window.cyrex.hosting.pullRequests(path!))
+  })
+}
+
+export function useCreatePullRequest(path: string) {
+  return useHostingMutation(
+    (input: CreatePullRequestInput) => window.cyrex.hosting.createPullRequest(path, input),
+    ['pullRequests']
   )
 }

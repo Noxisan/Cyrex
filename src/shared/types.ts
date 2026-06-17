@@ -453,3 +453,46 @@ export type DeviceLoginStatus =
   | { status: 'authorized'; account: HostingAccount }
   | { status: 'expired' }
   | { status: 'denied' }
+
+// ── Pull / merge requests ───────────────────────────────────────────────────
+// A provider-agnostic view of a pull request (GitHub/Bitbucket) or merge request
+// (GitLab). Metadata only — no tokens. State is normalized across providers.
+
+export type PullRequestState = 'open' | 'merged' | 'closed'
+
+export interface PullRequest {
+  /** Provider's internal id (stringified). */
+  id: string
+  /** User-facing number (GitHub/Bitbucket PR number, GitLab MR iid). */
+  number: number
+  title: string
+  state: PullRequestState
+  /** Login of the author, or null when the provider omits it. */
+  author: string | null
+  /** Source (head) branch name. */
+  sourceBranch: string
+  /** Target (base) branch name. */
+  targetBranch: string
+  isDraft: boolean
+  htmlUrl: string
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+export interface CreatePullRequestInput {
+  title: string
+  body?: string
+  sourceBranch: string
+  targetBranch: string
+  draft?: boolean
+}
+
+/**
+ * Result of listing pull requests for the active repo. Distinguishes a real list
+ * from the benign "this repo's remote isn't a connected host" states, so the UI
+ * can guide the user instead of showing an error.
+ */
+export type PullRequestList =
+  | { status: 'ok'; provider: HostingProviderId; repo: string; items: PullRequest[] }
+  | { status: 'unsupported'; reason: string }
+  | { status: 'noAccount'; provider: HostingProviderId }
