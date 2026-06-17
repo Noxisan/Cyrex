@@ -196,6 +196,8 @@
     "themeLight": "Hell",
     "themeDark": "Dunkel",
     "themeSystem": "System",
+    "template": "Design-Vorlage",
+    "templateHint": "Wähle ein komplettes Farbschema. Thema und Akzent unten gelten für die Vorlage „Classic“.",
     "accent": "Akzentfarbe",
     "accentHint": "Für aktive Branches, primäre Schaltflächen, Links und Auswahl. Diff-, Konflikt- und Gefahrenfarben bleiben unverändert.",
     "shortcut": {

@@ -6,6 +6,7 @@
 
 import { create } from 'zustand'
 import type { RepoRef } from '@shared/types'
+import { TEMPLATES, TEMPLATE_VARS, isNamedTemplate } from '../lib/templates'
 
 /** The resolved, applied theme (what `data-theme` is set to). */
 export type Theme = 'dark' | 'light'
@@ -87,6 +88,8 @@ interface RepoState {
   themeMode: ThemeMode
   /** Selected accent palette id (see ACCENTS). */
   accent: string
+  /** Selected theme template id (see TEMPLATES); 'classic' uses theme+accent. */
+  template: string
   /** Which view a repository opens into. */
   defaultView: ViewMode
 
@@ -121,6 +124,7 @@ interface RepoState {
   setThemeMode: (mode: ThemeMode) => void
   toggleTheme: () => void
   setAccent: (id: string) => void
+  setTemplate: (id: string) => void
   setDefaultView: (view: ViewMode) => void
 }
 
@@ -128,7 +132,13 @@ const REPOS_KEY = 'cyrex.repos'
 const THEME_KEY = 'cyrex.theme'
 const THEME_MODE_KEY = 'cyrex.themeMode'
 const ACCENT_KEY = 'cyrex.accent'
+const TEMPLATE_KEY = 'cyrex.template'
 const DEFAULT_VIEW_KEY = 'cyrex.defaultView'
+
+function initialTemplate(): string {
+  const id = localStorage.getItem(TEMPLATE_KEY)
+  return id && TEMPLATES.some((t) => t.id === id) ? id : 'classic'
+}
 
 function loadRepos(): RepoEntry[] {
   try {
@@ -183,6 +193,35 @@ export function applyAccent(id: string): void {
   root.style.setProperty('--color-accent-hover', p.hover)
 }
 
+/** The concrete dark/light a template+mode resolves to (named templates fix it). */
+function resolvedTheme(template: string, mode: ThemeMode): Theme {
+  if (isNamedTemplate(template)) {
+    return TEMPLATES.find((t) => t.id === template)?.dark ? 'dark' : 'light'
+  }
+  return resolveTheme(mode)
+}
+
+/**
+ * Apply the full appearance: a named template overrides the base + accent CSS
+ * variables (and fixes light/dark); `classic` clears those overrides and honors
+ * the theme-mode + accent picker. Diff/syntax tokens follow `data-theme`.
+ */
+export function applyAppearance(template: string, mode: ThemeMode, accentId: string): void {
+  const root = document.documentElement
+  applyTheme(resolvedTheme(template, mode))
+  const tpl = TEMPLATES.find((t) => t.id === template)
+  if (tpl && isNamedTemplate(template)) {
+    for (const v of TEMPLATE_VARS) {
+      const val = tpl.vars[v]
+      if (val) root.style.setProperty(v, val)
+      else root.style.removeProperty(v)
+    }
+  } else {
+    for (const v of TEMPLATE_VARS) root.style.removeProperty(v)
+    applyAccent(accentId)
+  }
+}
+
 export const useRepoStore = create<RepoState>((set, get) => ({
   repos: loadRepos(),
   activePath: null,
@@ -201,9 +240,10 @@ export const useRepoStore = create<RepoState>((set, get) => ({
   createTagTarget: null,
   settingsOpen: false,
   gitignoreOpen: false,
-  theme: resolveTheme(initialThemeMode()),
+  theme: resolvedTheme(initialTemplate(), initialThemeMode()),
   themeMode: initialThemeMode(),
   accent: initialAccent().id,
+  template: initialTemplate(),
   defaultView: initialDefaultView(),
 
   addRepo: (repo) =>
@@ -284,9 +324,9 @@ export const useRepoStore = create<RepoState>((set, get) => ({
 
   setThemeMode: (mode) => {
     localStorage.setItem(THEME_MODE_KEY, mode)
-    const theme = resolveTheme(mode)
-    applyTheme(theme)
-    set({ themeMode: mode, theme })
+    const s = get()
+    applyAppearance(s.template, mode, s.accent)
+    set({ themeMode: mode, theme: resolvedTheme(s.template, mode) })
   },
 
   // Quick toggle (topbar / palette): pick an explicit mode opposite to current.
@@ -294,8 +334,16 @@ export const useRepoStore = create<RepoState>((set, get) => ({
 
   setAccent: (id) => {
     localStorage.setItem(ACCENT_KEY, id)
-    applyAccent(id)
+    const s = get()
+    applyAppearance(s.template, s.themeMode, id)
     set({ accent: id })
+  },
+
+  setTemplate: (id) => {
+    localStorage.setItem(TEMPLATE_KEY, id)
+    const s = get()
+    applyAppearance(id, s.themeMode, s.accent)
+    set({ template: id, theme: resolvedTheme(id, s.themeMode) })
   },
 
   setDefaultView: (view) => {
@@ -305,12 +353,12 @@ export const useRepoStore = create<RepoState>((set, get) => ({
 }))
 
 // When following the OS theme, react to live changes (e.g. day/night switch).
+// Only the Classic template follows the OS; named templates fix their own mode.
 window
   .matchMedia?.('(prefers-color-scheme: light)')
   .addEventListener?.('change', () => {
-    const { themeMode } = useRepoStore.getState()
-    if (themeMode !== 'system') return
-    const theme = resolveTheme('system')
-    applyTheme(theme)
-    useRepoStore.setState({ theme })
+    const s = useRepoStore.getState()
+    if (s.themeMode !== 'system' || isNamedTemplate(s.template)) return
+    applyAppearance(s.template, 'system', s.accent)
+    useRepoStore.setState({ theme: resolveTheme('system') })
   })

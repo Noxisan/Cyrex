@@ -4,11 +4,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './i18n'
 import './styles/index.css'
 import { App } from './App'
-import { applyAccent, applyTheme, useRepoStore } from './store/repoStore'
+import { applyAppearance, useRepoStore } from './store/repoStore'
 
-// Apply the persisted theme + accent before first paint.
-applyTheme(useRepoStore.getState().theme)
-applyAccent(useRepoStore.getState().accent)
+// Apply the persisted template (or theme + accent) before first paint.
+{
+  const s = useRepoStore.getState()
+  applyAppearance(s.template, s.themeMode, s.accent)
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {

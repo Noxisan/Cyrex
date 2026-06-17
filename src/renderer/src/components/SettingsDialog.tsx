@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { ACCENTS, useRepoStore } from '../store/repoStore'
 import type { ThemeMode, ViewMode } from '../store/repoStore'
+import { TEMPLATES } from '../lib/templates'
 import { MOD_KEY as MOD } from '../lib/platform'
 import { LANGUAGES } from '../i18n'
 
@@ -79,6 +80,8 @@ export function SettingsDialog(): React.JSX.Element | null {
   const setThemeMode = useRepoStore((s) => s.setThemeMode)
   const accent = useRepoStore((s) => s.accent)
   const setAccent = useRepoStore((s) => s.setAccent)
+  const template = useRepoStore((s) => s.template)
+  const setTemplate = useRepoStore((s) => s.setTemplate)
   const defaultView = useRepoStore((s) => s.defaultView)
   const setDefaultView = useRepoStore((s) => s.setDefaultView)
   const [section, setSection] = useState<SectionId>('general')
@@ -182,6 +185,39 @@ export function SettingsDialog(): React.JSX.Element | null {
           {section === 'appearance' && (
             <section>
               <h3 className="mb-3 text-sm font-semibold text-fg">{t('settings.appearance')}</h3>
+
+              <p className="mb-1 text-xs text-fg">{t('settings.template')}</p>
+              <p className="mb-3 text-[11px] leading-relaxed text-fg-subtle">
+                {t('settings.templateHint')}
+              </p>
+              <div className="mb-3 grid grid-cols-3 gap-2">
+                {TEMPLATES.map((tpl) => (
+                  <button
+                    key={tpl.id}
+                    type="button"
+                    onClick={() => setTemplate(tpl.id)}
+                    className={`flex flex-col gap-1.5 rounded-[var(--radius-card)] border p-1.5 text-start transition-colors ${
+                      template === tpl.id
+                        ? 'border-accent bg-surface-2'
+                        : 'border-border hover:bg-surface-2'
+                    }`}
+                  >
+                    <span className="flex h-5 overflow-hidden rounded-[4px]">
+                      {tpl.swatch.map((c, i) => (
+                        <span key={i} className="flex-1" style={{ background: c }} />
+                      ))}
+                    </span>
+                    <span className="flex items-center gap-1 truncate text-[11px] text-fg">
+                      {template === tpl.id && (
+                        <Check size={11} strokeWidth={3} className="shrink-0 text-accent" />
+                      )}
+                      <span className="truncate">{tpl.label}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <div className="border-t border-border" />
+
               <Row label={t('settings.theme')}>
                 <Segmented<ThemeMode>
                   value={themeMode}

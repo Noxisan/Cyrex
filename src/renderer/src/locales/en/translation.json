@@ -196,6 +196,8 @@
     "themeLight": "Light",
     "themeDark": "Dark",
     "themeSystem": "System",
+    "template": "Theme template",
+    "templateHint": "Pick a full color scheme. Theme and accent below apply to the Classic template.",
     "accent": "Accent color",
     "accentHint": "Used for active branches, primary buttons, links and selection. Diff, conflict and danger colors stay fixed.",
     "shortcut": {
