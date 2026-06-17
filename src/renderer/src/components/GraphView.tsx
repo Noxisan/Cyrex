@@ -196,10 +196,17 @@ export function GraphView({ repoPath }: { repoPath: string }): React.JSX.Element
     return () => io.disconnect()
   }, [hasNextPage, isFetchingNextPage, fetchNextPage, commits])
 
+  const dateFormat = useRepoStore((s) => s.dateFormat)
   const rtf = useMemo(
     () => new Intl.RelativeTimeFormat(i18n.language, { numeric: 'auto', style: 'short' }),
     [i18n.language]
   )
+  const dtf = useMemo(
+    () => new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium' }),
+    [i18n.language]
+  )
+  const formatDate = (iso: string): string =>
+    dateFormat === 'absolute' ? dtf.format(new Date(iso)) : formatRel(rtf, iso)
 
   // Remote names (e.g. "origin") so a ref like "origin/main" reads as remote
   // rather than a local branch that merely contains a slash ("feature/x").
@@ -330,7 +337,7 @@ export function GraphView({ repoPath }: { repoPath: string }): React.JSX.Element
                 <div className="flex min-w-0 flex-1 items-center gap-2 pe-4 ps-1 text-xs">
                   <span className="truncate text-fg">{c.summary}</span>
                   <span className="ms-auto shrink-0 truncate text-fg-subtle">{c.author.name}</span>
-                  <span className="shrink-0 text-fg-subtle">{formatRel(rtf, c.author.date)}</span>
+                  <span className="shrink-0 text-fg-subtle">{formatDate(c.author.date)}</span>
                   <span className="shrink-0 font-mono text-[11px] text-fg-subtle">{c.shortSha}</span>
                 </div>
               </button>
