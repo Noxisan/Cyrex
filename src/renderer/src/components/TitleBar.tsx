@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
-import { ChevronRight, Minus, Square, Copy, X } from 'lucide-react'
+import { ChevronRight, Minus, Square, Copy, X, Settings } from 'lucide-react'
 import { useRepoStore } from '../store/repoStore'
+import { LanguageSwitcher } from './LanguageSwitcher'
+import { ThemeToggle } from './ThemeToggle'
 import markUrl from '../../../../build/icon.png'
 
 /**
@@ -12,6 +14,7 @@ import markUrl from '../../../../build/icon.png'
 export function TitleBar(): React.JSX.Element {
   const repos = useRepoStore((s) => s.repos)
   const activePath = useRepoStore((s) => s.activePath)
+  const openSettings = useRepoStore((s) => s.openSettings)
   const openName = repos.find((r) => r.path === activePath)?.name ?? null
   const [maximized, setMaximized] = useState(false)
 
@@ -32,7 +35,23 @@ export function TitleBar(): React.JSX.Element {
         </>
       )}
 
-      <div className="no-drag ms-auto flex h-full items-stretch">
+      {/* App controls (icon-only): language, theme, settings — left of the
+          window minimize/maximize/close buttons. */}
+      <div className="no-drag ms-auto flex items-center gap-0.5 pe-1">
+        <LanguageSwitcher />
+        <ThemeToggle />
+        <button
+          type="button"
+          onClick={openSettings}
+          title="Settings"
+          aria-label="Settings"
+          className="rounded-[var(--radius-card)] p-1.5 text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
+        >
+          <Settings size={16} strokeWidth={1.75} />
+        </button>
+      </div>
+
+      <div className="no-drag flex h-full items-stretch">
         <button
           type="button"
           aria-label="Minimize"

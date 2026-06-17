@@ -6,7 +6,6 @@ import {
   Command,
   FolderOpen,
   RefreshCw,
-  Settings,
   TerminalSquare,
   Undo2
 } from 'lucide-react'
@@ -14,8 +13,6 @@ import { useState } from 'react'
 import { useRepoStore } from '../store/repoStore'
 import { isMac } from '../lib/platform'
 import { useFetch, usePull, usePush, useStashSave } from '../hooks/useRepo'
-import { LanguageSwitcher } from './LanguageSwitcher'
-import { ThemeToggle } from './ThemeToggle'
 import { PromptDialog } from './PromptDialog'
 import type { PromptState } from './PromptDialog'
 import { SearchInput } from './SearchInput'
@@ -62,7 +59,6 @@ export function TopBar(): React.JSX.Element {
   const toggleTerminal = useRepoStore((s) => s.toggleTerminal)
   const togglePalette = useRepoStore((s) => s.togglePalette)
   const openRepoModal = useRepoStore((s) => s.openRepoModal)
-  const openSettings = useRepoStore((s) => s.openSettings)
   const stashSave = useStashSave(activePath ?? '')
   const fetch = useFetch(activePath ?? '')
   const pull = usePull(activePath ?? '')
@@ -107,71 +103,67 @@ export function TopBar(): React.JSX.Element {
   const hasRepo = !!activePath
 
   return (
-    <header className="flex h-11 shrink-0 items-center gap-1 border-b border-border bg-surface px-3">
-      <ToolButton
-        label={t('actions.fetch')}
-        icon={RefreshCw}
-        onClick={() => fetch.mutate(undefined)}
-        disabled={!hasRepo}
-        loading={fetch.isPending}
-      />
-      <ToolButton
-        label={t('actions.pull')}
-        icon={ArrowDownToLine}
-        onClick={() => pull.mutate(undefined)}
-        disabled={!hasRepo}
-        loading={pull.isPending}
-      />
-      <ToolButton
-        label={t('actions.push')}
-        icon={ArrowUpFromLine}
-        onClick={() => push.mutate(false)}
-        onContextMenu={pushMenu}
-        disabled={!hasRepo}
-        loading={push.isPending}
-      />
-      <ToolButton label={t('actions.stash')} icon={Archive} onClick={stash} disabled={!hasRepo} />
-      <ToolButton
-        label={t('actions.undo')}
-        icon={Undo2}
-        onClick={openReflog}
-        disabled={!hasRepo}
-      />
-      <ToolButton
-        label={t('actions.terminal')}
-        icon={TerminalSquare}
-        onClick={toggleTerminal}
-        disabled={!hasRepo}
-      />
+    <header className="flex h-11 shrink-0 items-center gap-2 border-b border-border bg-surface px-3">
+      {/* Left: repository actions. */}
+      <div className="flex flex-1 items-center gap-1">
+        <ToolButton
+          label={t('actions.fetch')}
+          icon={RefreshCw}
+          onClick={() => fetch.mutate(undefined)}
+          disabled={!hasRepo}
+          loading={fetch.isPending}
+        />
+        <ToolButton
+          label={t('actions.pull')}
+          icon={ArrowDownToLine}
+          onClick={() => pull.mutate(undefined)}
+          disabled={!hasRepo}
+          loading={pull.isPending}
+        />
+        <ToolButton
+          label={t('actions.push')}
+          icon={ArrowUpFromLine}
+          onClick={() => push.mutate(false)}
+          onContextMenu={pushMenu}
+          disabled={!hasRepo}
+          loading={push.isPending}
+        />
+        <ToolButton label={t('actions.stash')} icon={Archive} onClick={stash} disabled={!hasRepo} />
+        <ToolButton label={t('actions.undo')} icon={Undo2} onClick={openReflog} disabled={!hasRepo} />
+        <ToolButton
+          label={t('actions.terminal')}
+          icon={TerminalSquare}
+          onClick={toggleTerminal}
+          disabled={!hasRepo}
+        />
+      </div>
 
-      <div className="flex-1" />
-
+      {/* Center: commit search. */}
       {hasRepo && <SearchInput />}
-      <button
-        type="button"
-        onClick={openRepoModal}
-        className="flex items-center gap-1.5 rounded-[var(--radius-card)] bg-accent px-3 py-1.5 text-xs font-medium text-accent-fg transition-colors hover:bg-accent-hover"
-      >
-        <FolderOpen size={16} strokeWidth={1.75} />
-        {t('actions.openRepository')}
-      </button>
 
-      <div className="mx-1 h-5 w-px bg-border" aria-hidden />
-      <button
-        type="button"
-        onClick={togglePalette}
-        title={t('palette.open')}
-        aria-label={t('palette.open')}
-        className="flex items-center gap-1.5 rounded-[var(--radius-card)] px-2 py-1.5 text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
-      >
-        <Command size={16} strokeWidth={1.75} />
-        <kbd className="hidden rounded border border-border px-1 text-[10px] text-fg-subtle xl:inline">
-          {isMac ? '⌘K' : 'Ctrl+K'}
-        </kbd>
-      </button>
-      <LanguageSwitcher />
-      <ThemeToggle />
-      <ToolButton label={t('actions.settings')} icon={Settings} onClick={openSettings} />
+      {/* Right: command palette, then Open Repository. */}
+      <div className="flex flex-1 items-center justify-end gap-1.5">
+        <button
+          type="button"
+          onClick={togglePalette}
+          title={t('palette.open')}
+          aria-label={t('palette.open')}
+          className="flex items-center gap-1.5 rounded-[var(--radius-card)] px-2 py-1.5 text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
+        >
+          <Command size={16} strokeWidth={1.75} />
+          <kbd className="hidden rounded border border-border px-1 text-[10px] text-fg-subtle xl:inline">
+            {isMac ? '⌘K' : 'Ctrl+K'}
+          </kbd>
+        </button>
+        <button
+          type="button"
+          onClick={openRepoModal}
+          className="flex items-center gap-1.5 rounded-[var(--radius-card)] bg-accent px-3 py-1.5 text-xs font-medium text-accent-fg transition-colors hover:bg-accent-hover"
+        >
+          <FolderOpen size={16} strokeWidth={1.75} />
+          {t('actions.openRepository')}
+        </button>
+      </div>
 
       <PromptDialog state={prompt} onClose={() => setPrompt(null)} />
       <ContextMenu state={menu} onClose={() => setMenu(null)} />
