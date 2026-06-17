@@ -20,6 +20,7 @@ import type {
   EngineResult,
   HostingAccount,
   HostingProviderId,
+  IdentityInfo,
   LfsStatus,
   LogOptions,
   RebaseResult,
@@ -129,6 +130,11 @@ export const IpcChannels = {
   RepoReflog: 'repo:reflog',
   /** DESTRUCTIVE when mode is 'hard' — move HEAD to a commit (reset). */
   RepoReset: 'repo:reset',
+  /** Git author identity (global + per-repo) — view and configure. */
+  GitIdentity: 'git:identity',
+  GitSetGlobalIdentity: 'git:setGlobalIdentity',
+  GitSetRepoIdentity: 'git:setRepoIdentity',
+  GitClearRepoIdentity: 'git:clearRepoIdentity',
   /** Returns which engine backend is active (cli | nodegit). */
   EngineInfo: 'engine:info',
   /** Open a directory picker, returning the chosen path (or null). */
@@ -467,6 +473,22 @@ export interface IpcApi {
   }
   [IpcChannels.RepoReset]: {
     request: { path: string; sha: string; mode: 'soft' | 'mixed' | 'hard' }
+    response: EngineResult<null>
+  }
+  [IpcChannels.GitIdentity]: {
+    request: { path?: string }
+    response: EngineResult<IdentityInfo>
+  }
+  [IpcChannels.GitSetGlobalIdentity]: {
+    request: { name: string; email: string }
+    response: EngineResult<null>
+  }
+  [IpcChannels.GitSetRepoIdentity]: {
+    request: { path: string; name: string; email: string }
+    response: EngineResult<null>
+  }
+  [IpcChannels.GitClearRepoIdentity]: {
+    request: { path: string }
     response: EngineResult<null>
   }
   [IpcChannels.EngineInfo]: {

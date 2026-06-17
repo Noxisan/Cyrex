@@ -20,8 +20,10 @@ import type {
   DiffFile,
   FileStatus,
   FileStatusCode,
+  GitIdentity,
   GitOp,
   GitProgress,
+  IdentityInfo,
   LfsFile,
   LfsStatus,
   LogOptions,
@@ -57,6 +59,81 @@ export async function openRepo(path: string): Promise<RepoRef> {
   const { stdout } = await runGit(['rev-parse', '--show-toplevel'], { cwd: path })
   const root = stdout.trim() || path
   return { path: root, name: basename(root) }
+}
+
+// --- git identity ----------------------------------------------------------
+//
+// View/configure the author identity recorded on commits. Names/emails are not
+// secrets (they live in every commit), so this is exposed to the renderer. They
+// are written via the config command's value argument (no shell), and the
+// schemas reject leading '-' so a value can't be read as an option.
+
+/** Read a single config value, or '' when it is unset. */
+async function readConfig(args: string[], cwd?: string): Promise<string> {
+  const res = await runGit(['config', ...args], { cwd, throwOnError: false })
+  return res.code === 0 ? res.stdout.trim() : ''
+}
+
+/** The global identity (`git config --global user.name/email`). */
+export async function globalIdentity(): Promise<GitIdentity> {
+  return {
+    name: await readConfig(['--global', '--get', 'user.name']),
+    email: await readConfig(['--global', '--get', 'user.email'])
+  }
+}
+
+export async function setGlobalIdentity(name: string, email: string): Promise<void> {
+  await runGit(['config', '--global', 'user.name', name])
+  await runGit(['config', '--global', 'user.email', email])
+}
+
+/** A repo's local override and the effective identity its commits use. */
+async function repoIdentity(
+  repoPath: string
+): Promise<{ local: GitIdentity; effective: GitIdentity }> {
+  return {
+    local: {
+      name: await readConfig(['--local', '--get', 'user.name'], repoPath),
+      email: await readConfig(['--local', '--get', 'user.email'], repoPath)
+    },
+    effective: {
+      name: await readConfig(['--get', 'user.name'], repoPath),
+      email: await readConfig(['--get', 'user.email'], repoPath)
+    }
+  }
+}
+
+export async function setRepoIdentity(
+  repoPath: string,
+  name: string,
+  email: string
+): Promise<void> {
+  await runGit(['config', '--local', 'user.name', name], { cwd: repoPath })
+  await runGit(['config', '--local', 'user.email', email], { cwd: repoPath })
+}
+
+/** Remove a repo's local identity override so it falls back to the global one. */
+export async function clearRepoIdentity(repoPath: string): Promise<void> {
+  // --unset-all is a no-op (and exits 5) when the key isn't set; ignore that.
+  await runGit(['config', '--local', '--unset-all', 'user.name'], {
+    cwd: repoPath,
+    throwOnError: false
+  })
+  await runGit(['config', '--local', '--unset-all', 'user.email'], {
+    cwd: repoPath,
+    throwOnError: false
+  })
+}
+
+/** Global identity plus, when a repo is given, its local override + effective. */
+export async function identityInfo(repoPath?: string): Promise<IdentityInfo> {
+  const global = await globalIdentity()
+  if (!repoPath) {
+    const empty = { name: '', email: '' }
+    return { global, hasRepo: false, local: empty, effective: empty }
+  }
+  const { local, effective } = await repoIdentity(repoPath)
+  return { global, hasRepo: true, local, effective }
 }
 
 // --- status ---------------------------------------------------------------

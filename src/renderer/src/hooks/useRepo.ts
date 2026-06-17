@@ -21,6 +21,39 @@ export function useEngineInfo() {
   })
 }
 
+export function useIdentity(path: string | null) {
+  return useQuery({
+    queryKey: ['identity', path],
+    queryFn: async () => unwrap(await window.cyrex.identity(path ?? undefined))
+  })
+}
+
+function useIdentityMutation<TVars>(fn: (v: TVars) => Promise<EngineResult<unknown>>) {
+  const qc = useQueryClient()
+  const pushToast = useToastStore((s) => s.push)
+  return useMutation({
+    mutationFn: async (vars: TVars) => unwrap(await fn(vars)),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['identity'] }),
+    onError: (err) => pushToast((err as Error).message, 'error')
+  })
+}
+
+export function useSetGlobalIdentity() {
+  return useIdentityMutation((v: { name: string; email: string }) =>
+    window.cyrex.setGlobalIdentity(v.name, v.email)
+  )
+}
+
+export function useSetRepoIdentity(path: string) {
+  return useIdentityMutation((v: { name: string; email: string }) =>
+    window.cyrex.setRepoIdentity(path, v.name, v.email)
+  )
+}
+
+export function useClearRepoIdentity(path: string) {
+  return useIdentityMutation(() => window.cyrex.clearRepoIdentity(path))
+}
+
 export function useStatus(path: string | null) {
   return useQuery({
     queryKey: ['status', path],

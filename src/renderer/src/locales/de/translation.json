@@ -137,6 +137,23 @@
     "create": "Erstellen",
     "add": "Hinzufügen"
   },
+  "identity": {
+    "title": "Git-Identität",
+    "hint": "Name und E-Mail, die als Autor deiner Commits gespeichert werden.",
+    "global": "Global (alle Repositorys)",
+    "repo": "Dieses Repository — {{name}}",
+    "name": "Name",
+    "email": "E-Mail",
+    "save": "Speichern",
+    "saveOverride": "Override speichern",
+    "useGlobal": "Global verwenden",
+    "saved": "Git-Identität gespeichert",
+    "usingGlobal": "Dieses Repository verwendet jetzt die globale Identität",
+    "overrides": "Überschreibt die globale Identität.",
+    "inherits": "Verwendet die globale Identität.",
+    "commitsUse": "Commits verwenden",
+    "none": "Keine Identität gesetzt — Commits schlagen fehl, bis eine gesetzt ist."
+  },
   "submodule": {
     "add": "Submodul hinzufügen",
     "addTitle": "Submodul hinzufügen",
@@ -189,6 +206,7 @@
   "settings": {
     "general": "Allgemein",
     "appearance": "Darstellung",
+    "git": "Git",
     "shortcuts": "Tastenkürzel",
     "language": "Sprache",
     "startView": "Repositorys öffnen in",

@@ -27,7 +27,10 @@ import {
   hostingPollLoginSchema,
   hostingSetOAuthAppSchema,
   hostingStartLoginSchema,
+  identitySchema,
   imageVersionsSchema,
+  setGlobalIdentitySchema,
+  setRepoIdentitySchema,
   setRemoteSchema,
   checkoutRemoteSchema,
   checkoutSchema,
@@ -94,6 +97,35 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(
     IpcChannels.EngineInfo,
     wrap(null, () => engine.getEngineInfo())
+  )
+
+  ipcMain.handle(
+    IpcChannels.GitIdentity,
+    wrap(identitySchema, (req) => engine.identityInfo(req.path))
+  )
+
+  ipcMain.handle(
+    IpcChannels.GitSetGlobalIdentity,
+    wrap(setGlobalIdentitySchema, async (req) => {
+      await engine.setGlobalIdentity(req.name, req.email)
+      return null
+    })
+  )
+
+  ipcMain.handle(
+    IpcChannels.GitSetRepoIdentity,
+    wrap(setRepoIdentitySchema, async (req) => {
+      await engine.setRepoIdentity(req.path, req.name, req.email)
+      return null
+    })
+  )
+
+  ipcMain.handle(
+    IpcChannels.GitClearRepoIdentity,
+    wrap(repoPathSchema, async (req) => {
+      await engine.clearRepoIdentity(req.path)
+      return null
+    })
   )
 
   ipcMain.handle(

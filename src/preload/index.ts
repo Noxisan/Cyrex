@@ -26,6 +26,12 @@ function invoke<C extends keyof IpcApi>(channel: C, payload?: Req<C>): Promise<R
 
 export const cyrexApi = {
   engineInfo: () => invoke(IpcChannels.EngineInfo),
+  identity: (path?: string) => invoke(IpcChannels.GitIdentity, { path }),
+  setGlobalIdentity: (name: string, email: string) =>
+    invoke(IpcChannels.GitSetGlobalIdentity, { name, email }),
+  setRepoIdentity: (path: string, name: string, email: string) =>
+    invoke(IpcChannels.GitSetRepoIdentity, { path, name, email }),
+  clearRepoIdentity: (path: string) => invoke(IpcChannels.GitClearRepoIdentity, { path }),
   openRepoDialog: () => invoke(IpcChannels.RepoOpenDialog),
   openRepo: (path: string) => invoke(IpcChannels.RepoOpen, { path }),
   status: (path: string) => invoke(IpcChannels.RepoStatus, { path }),

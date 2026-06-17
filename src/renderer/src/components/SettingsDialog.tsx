@@ -9,6 +9,7 @@ import {
   RotateCcw,
   SlidersHorizontal,
   Sun,
+  UserRound,
   X
 } from 'lucide-react'
 import { ACCENTS, useRepoStore } from '../store/repoStore'
@@ -18,8 +19,9 @@ import { TEMPLATES, CUSTOM_ID, CUSTOM_FIELDS } from '../lib/templates'
 import { SHORTCUT_COMMANDS, comboFromEvent, comboKeys } from '../lib/shortcuts'
 import { MOD_KEY as MOD } from '../lib/platform'
 import { LANGUAGES } from '../i18n'
+import { IdentitySettings } from './IdentitySettings'
 
-type SectionId = 'general' | 'appearance' | 'shortcuts'
+type SectionId = 'general' | 'appearance' | 'git' | 'shortcuts'
 
 /** Built-in, non-rebindable shortcuts shown for reference. */
 function fixedShortcuts(t: (k: string) => string): { keys: string[]; label: string }[] {
@@ -135,6 +137,7 @@ export function SettingsDialog(): React.JSX.Element | null {
   const nav: { id: SectionId; label: string; icon: typeof Sun }[] = [
     { id: 'general', label: t('settings.general'), icon: SlidersHorizontal },
     { id: 'appearance', label: t('settings.appearance'), icon: Palette },
+    { id: 'git', label: t('settings.git'), icon: UserRound },
     { id: 'shortcuts', label: t('settings.shortcuts'), icon: Keyboard }
   ]
 
@@ -323,6 +326,12 @@ export function SettingsDialog(): React.JSX.Element | null {
                   ))}
                 </div>
               </div>
+            </section>
+          )}
+
+          {section === 'git' && (
+            <section>
+              <IdentitySettings />
             </section>
           )}
 

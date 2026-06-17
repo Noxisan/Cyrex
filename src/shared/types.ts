@@ -32,6 +32,24 @@ export interface GitProgress {
   percent: number | null
 }
 
+/** A git author identity (name + email). */
+export interface GitIdentity {
+  name: string
+  email: string
+}
+
+/** Global and (optionally) per-repository git identity. */
+export interface IdentityInfo {
+  /** `git config --global user.name/email` (empty strings when unset). */
+  global: GitIdentity
+  /** True when a repo was queried, so local/effective are meaningful. */
+  hasRepo: boolean
+  /** The repo's local override (empty strings when not set). */
+  local: GitIdentity
+  /** What the repo's commits actually use (local → global → system). */
+  effective: GitIdentity
+}
+
 export type FileStatusCode =
   | 'added'
   | 'modified'

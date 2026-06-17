@@ -10,6 +10,23 @@ export const repoPathSchema = z.object({
   path: z.string().min(1)
 })
 
+// A git identity value (name/email): bounded, no control chars, not a flag
+// (leading '-' could be read as an option by `git config`).
+const identityValue = z
+  .string()
+  .min(1)
+  .max(256)
+  .refine((s) => ![...s].some((c) => c.charCodeAt(0) < 0x20), 'invalid value')
+  .refine((s) => !s.startsWith('-'), 'invalid value')
+
+export const identitySchema = z.object({ path: z.string().min(1).optional() })
+export const setGlobalIdentitySchema = z.object({ name: identityValue, email: identityValue })
+export const setRepoIdentitySchema = z.object({
+  path: z.string().min(1),
+  name: identityValue,
+  email: identityValue
+})
+
 export const logSchema = z.object({
   path: z.string().min(1),
   options: z
@@ -255,6 +272,12 @@ export const hostingConnectTokenSchema = z.object({
   provider: providerId,
   token: z.string().min(1).max(500)
 })
+export const hostingSetOAuthAppSchema = z.object({
+  provider: providerId,
+  clientId: z.string().min(1).max(256),
+  clientSecret: z.string().min(1).max(512)
+})
+export const hostingClearOAuthAppSchema = z.object({ provider: providerId })
 export const hostingDisconnectSchema = z.object({ id: accountId })
 export const hostingListReposSchema = z.object({ accountId })
 export const hostingCreateRepoSchema = z.object({
