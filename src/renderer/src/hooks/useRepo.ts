@@ -4,10 +4,36 @@
  * thrown error so components render real error states (never faked success).
  */
 
+import { useEffect } from 'react'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import type { DiffSource, EngineResult, LogOptions, RebaseTodoItem } from '@shared/types'
 import { useToastStore } from '../store/toastStore'
+
+/**
+ * Silently fetch the active repo every `intervalMinutes` (0 disables). Runs in
+ * the background with no toast; on success it just refreshes the cached repo
+ * data so ahead/behind counts and remote branches stay current.
+ */
+export function useAutoFetch(path: string | null, intervalMinutes: number): void {
+  const qc = useQueryClient()
+  useEffect(() => {
+    if (!path || intervalMinutes <= 0) return
+    let cancelled = false
+    const tick = async (): Promise<void> => {
+      const res = await window.cyrex.fetch(path)
+      if (cancelled || !res.ok) return
+      for (const key of ['status', 'log', 'log-infinite', 'branches', 'tags']) {
+        void qc.invalidateQueries({ queryKey: [key] })
+      }
+    }
+    const id = setInterval(() => void tick(), intervalMinutes * 60_000)
+    return () => {
+      cancelled = true
+      clearInterval(id)
+    }
+  }, [path, intervalMinutes, qc])
+}
 
 function unwrap<T>(res: EngineResult<T>): T {
   if (!res.ok) throw new Error(res.error)

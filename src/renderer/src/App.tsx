@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRepoStore } from './store/repoStore'
 import { useProgressStore } from './store/progressStore'
 import { useGlobalShortcuts } from './hooks/useGlobalShortcuts'
+import { useAutoFetch } from './hooks/useRepo'
 import { TitleBar } from './components/TitleBar'
 import { GitProgressBar } from './components/GitProgressBar'
 import { ResizeHandle } from './components/ResizeHandle'
@@ -39,6 +40,7 @@ const loadDetailWidth = (): number => {
 export function App(): React.JSX.Element {
   const activePath = useRepoStore((s) => s.activePath)
   const viewMode = useRepoStore((s) => s.viewMode)
+  const autoFetchMinutes = useRepoStore((s) => s.autoFetchMinutes)
   const setProgress = useProgressStore((s) => s.setProgress)
 
   // Feed the global progress bar from the main-process git progress stream.
@@ -46,6 +48,9 @@ export function App(): React.JSX.Element {
 
   // Customizable keyboard shortcuts (Settings → Shortcuts).
   useGlobalShortcuts()
+
+  // Background auto-fetch for the active repo (Settings → General; 0 = off).
+  useAutoFetch(activePath, autoFetchMinutes)
 
   // Resizable commit-detail panel: drag its left edge to widen/narrow it.
   const splitRef = useRef<HTMLDivElement>(null)

@@ -22,6 +22,8 @@ export type ThemeMode = 'dark' | 'light' | 'system'
 export type ViewMode = 'history' | 'changes'
 /** Diff rendering layout: unified (inline) or side-by-side (split). */
 export type DiffMode = 'inline' | 'split'
+/** How commit timestamps read in the graph. */
+export type DateFormat = 'relative' | 'absolute'
 
 /**
  * An accent palette. Only the brand/interactive accent is themed here — danger,
@@ -116,6 +118,12 @@ interface RepoState {
   diffWrap: boolean
   /** Tab width (in spaces) for rendered diff lines. */
   diffTabWidth: number
+  /** Minutes between automatic background fetches; 0 disables auto-fetch. */
+  autoFetchMinutes: number
+  /** Reopen the repository that was active when the app last closed. */
+  restoreLastRepo: boolean
+  /** Commit timestamp style in the graph. */
+  dateFormat: DateFormat
 
   addRepo: (repo: RepoRef) => void
   removeRepo: (path: string) => void
@@ -160,6 +168,9 @@ interface RepoState {
   setDiffMode: (mode: DiffMode) => void
   setDiffWrap: (wrap: boolean) => void
   setDiffTabWidth: (width: number) => void
+  setAutoFetchMinutes: (minutes: number) => void
+  setRestoreLastRepo: (restore: boolean) => void
+  setDateFormat: (format: DateFormat) => void
 }
 
 const REPOS_KEY = 'cyrex.repos'
@@ -173,6 +184,13 @@ const FONT_SCALE_KEY = 'cyrex.fontScale'
 const DIFF_MODE_KEY = 'cyrex.diffMode'
 const DIFF_WRAP_KEY = 'cyrex.diffWrap'
 const DIFF_TAB_KEY = 'cyrex.diffTabWidth'
+const AUTO_FETCH_KEY = 'cyrex.autoFetchMinutes'
+const RESTORE_KEY = 'cyrex.restoreLastRepo'
+const LAST_REPO_KEY = 'cyrex.lastRepo'
+const DATE_FORMAT_KEY = 'cyrex.dateFormat'
+
+/** Auto-fetch interval choices (minutes); 0 = off. */
+export const AUTO_FETCH_OPTIONS = [0, 5, 10, 15]
 
 /** Interface zoom bounds (1 = 100%); steps of 0.1 in the Settings control. */
 export const MIN_FONT_SCALE = 0.8
@@ -249,6 +267,23 @@ function initialDiffTabWidth(): number {
   const n = Number(localStorage.getItem(DIFF_TAB_KEY))
   return DIFF_TAB_WIDTHS.includes(n) ? n : 4
 }
+function initialAutoFetch(): number {
+  const n = Number(localStorage.getItem(AUTO_FETCH_KEY))
+  return AUTO_FETCH_OPTIONS.includes(n) ? n : 0
+}
+// Restore is on by default — unset is treated as enabled.
+function initialRestore(): boolean {
+  return localStorage.getItem(RESTORE_KEY) !== '0'
+}
+function initialDateFormat(): DateFormat {
+  return localStorage.getItem(DATE_FORMAT_KEY) === 'absolute' ? 'absolute' : 'relative'
+}
+/** The repo to reopen on launch, when enabled and still in the known list. */
+function initialActivePath(): string | null {
+  if (!initialRestore()) return null
+  const last = localStorage.getItem(LAST_REPO_KEY)
+  return last && loadRepos().some((r) => r.path === last) ? last : null
+}
 
 export function applyTheme(theme: Theme): void {
   document.documentElement.setAttribute('data-theme', theme)
@@ -314,7 +349,7 @@ export function applyAppearance(template: string, mode: ThemeMode, accentId: str
 
 export const useRepoStore = create<RepoState>((set, get) => ({
   repos: loadRepos(),
-  activePath: null,
+  activePath: initialActivePath(),
   selectedSha: null,
   viewMode: 'history',
   selectedFile: null,
@@ -343,6 +378,9 @@ export const useRepoStore = create<RepoState>((set, get) => ({
   diffMode: initialDiffMode(),
   diffWrap: initialDiffWrap(),
   diffTabWidth: initialDiffTabWidth(),
+  autoFetchMinutes: initialAutoFetch(),
+  restoreLastRepo: initialRestore(),
+  dateFormat: initialDateFormat(),
 
   addRepo: (repo) =>
     set((s) => {
@@ -351,6 +389,7 @@ export const useRepoStore = create<RepoState>((set, get) => ({
       const entry: RepoEntry = { ...repo, favorite: prev?.favorite, color: prev?.color }
       const repos = [entry, ...s.repos.filter((r) => r.path !== repo.path)]
       saveRepos(repos)
+      localStorage.setItem(LAST_REPO_KEY, repo.path)
       return {
         repos,
         activePath: repo.path,
@@ -385,7 +424,8 @@ export const useRepoStore = create<RepoState>((set, get) => ({
       return { repos }
     }),
 
-  setActive: (path) =>
+  setActive: (path) => {
+    if (path) localStorage.setItem(LAST_REPO_KEY, path)
     set((s) => ({
       activePath: path,
       viewMode: s.defaultView,
@@ -397,7 +437,8 @@ export const useRepoStore = create<RepoState>((set, get) => ({
       rebaseBase: null,
       prPanelOpen: false,
       createPROpen: false
-    })),
+    }))
+  },
   selectCommit: (sha) => set({ selectedSha: sha }),
   setViewMode: (mode) => set({ viewMode: mode }),
   selectFile: (file) => set({ selectedFile: file }),
@@ -490,6 +531,19 @@ export const useRepoStore = create<RepoState>((set, get) => ({
   setDiffTabWidth: (width) => {
     localStorage.setItem(DIFF_TAB_KEY, String(width))
     set({ diffTabWidth: width })
+  },
+
+  setAutoFetchMinutes: (minutes) => {
+    localStorage.setItem(AUTO_FETCH_KEY, String(minutes))
+    set({ autoFetchMinutes: minutes })
+  },
+  setRestoreLastRepo: (restore) => {
+    localStorage.setItem(RESTORE_KEY, restore ? '1' : '0')
+    set({ restoreLastRepo: restore })
+  },
+  setDateFormat: (format) => {
+    localStorage.setItem(DATE_FORMAT_KEY, format)
+    set({ dateFormat: format })
   }
 }))
 

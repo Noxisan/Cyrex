@@ -17,12 +17,13 @@ import {
 } from 'lucide-react'
 import {
   ACCENTS,
+  AUTO_FETCH_OPTIONS,
   DIFF_TAB_WIDTHS,
   MAX_FONT_SCALE,
   MIN_FONT_SCALE,
   useRepoStore
 } from '../store/repoStore'
-import type { DiffMode, ThemeMode, ViewMode } from '../store/repoStore'
+import type { DateFormat, DiffMode, ThemeMode, ViewMode } from '../store/repoStore'
 import { useShortcutsStore } from '../store/shortcutsStore'
 import { TEMPLATES, CUSTOM_ID, CUSTOM_FIELDS } from '../lib/templates'
 import { SHORTCUT_COMMANDS, comboFromEvent, comboKeys } from '../lib/shortcuts'
@@ -110,6 +111,12 @@ export function SettingsDialog(): React.JSX.Element | null {
   const setDiffWrap = useRepoStore((s) => s.setDiffWrap)
   const diffTabWidth = useRepoStore((s) => s.diffTabWidth)
   const setDiffTabWidth = useRepoStore((s) => s.setDiffTabWidth)
+  const autoFetchMinutes = useRepoStore((s) => s.autoFetchMinutes)
+  const setAutoFetchMinutes = useRepoStore((s) => s.setAutoFetchMinutes)
+  const restoreLastRepo = useRepoStore((s) => s.restoreLastRepo)
+  const setRestoreLastRepo = useRepoStore((s) => s.setRestoreLastRepo)
+  const dateFormat = useRepoStore((s) => s.dateFormat)
+  const setDateFormat = useRepoStore((s) => s.setDateFormat)
   const bindings = useShortcutsStore((s) => s.bindings)
   const setBinding = useShortcutsStore((s) => s.setBinding)
   const resetBinding = useShortcutsStore((s) => s.resetBinding)
@@ -229,6 +236,42 @@ export function SettingsDialog(): React.JSX.Element | null {
                   options={[
                     { value: 'history', label: t('tabs.history') },
                     { value: 'changes', label: t('tabs.changes') }
+                  ]}
+                />
+              </Row>
+              <div className="border-t border-border" />
+              <Row label={t('settings.restoreLastRepo')}>
+                <Segmented<'on' | 'off'>
+                  value={restoreLastRepo ? 'on' : 'off'}
+                  onChange={(v) => setRestoreLastRepo(v === 'on')}
+                  options={[
+                    { value: 'off', label: t('settings.off') },
+                    { value: 'on', label: t('settings.on') }
+                  ]}
+                />
+              </Row>
+              <div className="border-t border-border" />
+              <Row label={t('settings.autoFetch')}>
+                <select
+                  value={autoFetchMinutes}
+                  onChange={(e) => setAutoFetchMinutes(Number(e.target.value))}
+                  className="cursor-pointer rounded-[var(--radius-card)] border border-border bg-bg px-2 py-1 text-xs text-fg outline-none"
+                >
+                  {AUTO_FETCH_OPTIONS.map((m) => (
+                    <option key={m} value={m}>
+                      {m === 0 ? t('settings.off') : `${m} ${t('settings.minutesShort')}`}
+                    </option>
+                  ))}
+                </select>
+              </Row>
+              <div className="border-t border-border" />
+              <Row label={t('settings.dateFormat')}>
+                <Segmented<DateFormat>
+                  value={dateFormat}
+                  onChange={setDateFormat}
+                  options={[
+                    { value: 'relative', label: t('settings.dateRelative') },
+                    { value: 'absolute', label: t('settings.dateAbsolute') }
                   ]}
                 />
               </Row>
