@@ -91,6 +91,8 @@ interface RepoState {
   createTagTarget: string | null
   /** The Settings dialog. */
   settingsOpen: boolean
+  /** Which Settings section is shown (general/appearance/diff/git/shortcuts). */
+  settingsSection: string
   /** The visual .gitignore editor dialog. */
   gitignoreOpen: boolean
   /** The Pull Requests panel (hosting integration). */
@@ -149,7 +151,8 @@ interface RepoState {
   closeCreateRepo: () => void
   openCreateTag: (ref: string) => void
   closeCreateTag: () => void
-  openSettings: () => void
+  openSettings: (section?: string) => void
+  setSettingsSection: (section: string) => void
   closeSettings: () => void
   openGitignore: () => void
   closeGitignore: () => void
@@ -364,6 +367,7 @@ export const useRepoStore = create<RepoState>((set, get) => ({
   createRepoOpen: false,
   createTagTarget: null,
   settingsOpen: false,
+  settingsSection: 'general',
   gitignoreOpen: false,
   prPanelOpen: false,
   createPROpen: false,
@@ -458,7 +462,12 @@ export const useRepoStore = create<RepoState>((set, get) => ({
   closeCreateRepo: () => set({ createRepoOpen: false }),
   openCreateTag: (ref) => set({ createTagTarget: ref }),
   closeCreateTag: () => set({ createTagTarget: null }),
-  openSettings: () => set({ settingsOpen: true }),
+  // `section` is optional and ignored unless a real string (so an accidental
+  // event arg from an onClick handler can't corrupt it); omitting it keeps the
+  // last-viewed section.
+  openSettings: (section) =>
+    set(typeof section === 'string' ? { settingsOpen: true, settingsSection: section } : { settingsOpen: true }),
+  setSettingsSection: (section) => set({ settingsSection: section }),
   closeSettings: () => set({ settingsOpen: false }),
   openGitignore: () => set({ gitignoreOpen: true }),
   closeGitignore: () => set({ gitignoreOpen: false }),

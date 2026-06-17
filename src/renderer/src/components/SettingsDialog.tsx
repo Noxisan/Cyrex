@@ -46,11 +46,22 @@ function fixedShortcuts(t: (k: string) => string): { keys: string[]; label: stri
   ]
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }): React.JSX.Element {
+function Row({
+  label,
+  desc,
+  children
+}: {
+  label: string
+  desc?: string
+  children: React.ReactNode
+}): React.JSX.Element {
   return (
     <div className="flex items-center justify-between gap-4 py-2.5">
-      <span className="text-xs text-fg">{label}</span>
-      <div className="flex items-center gap-1.5">{children}</div>
+      <div className="min-w-0">
+        <div className="text-xs text-fg">{label}</div>
+        {desc && <div className="mt-0.5 text-[11px] leading-snug text-fg-subtle">{desc}</div>}
+      </div>
+      <div className="flex shrink-0 items-center gap-1.5">{children}</div>
     </div>
   )
 }
@@ -121,7 +132,8 @@ export function SettingsDialog(): React.JSX.Element | null {
   const setBinding = useShortcutsStore((s) => s.setBinding)
   const resetBinding = useShortcutsStore((s) => s.resetBinding)
   const resetAll = useShortcutsStore((s) => s.resetAll)
-  const [section, setSection] = useState<SectionId>('general')
+  const section = useRepoStore((s) => s.settingsSection)
+  const setSection = useRepoStore((s) => s.setSettingsSection)
   const [recordingId, setRecordingId] = useState<string | null>(null)
 
   // Escape dismisses (the Cmd/Ctrl+, toggle is owned by the global dispatcher).
@@ -214,7 +226,7 @@ export function SettingsDialog(): React.JSX.Element | null {
           {section === 'general' && (
             <section>
               <h3 className="mb-3 text-sm font-semibold text-fg">{t('settings.general')}</h3>
-              <Row label={t('settings.language')}>
+              <Row label={t('settings.language')} desc={t('settings.languageDesc')}>
                 <select
                   value={i18n.language}
                   onChange={(e) => void i18n.changeLanguage(e.target.value)}
@@ -229,7 +241,7 @@ export function SettingsDialog(): React.JSX.Element | null {
                 </select>
               </Row>
               <div className="border-t border-border" />
-              <Row label={t('settings.startView')}>
+              <Row label={t('settings.startView')} desc={t('settings.startViewDesc')}>
                 <Segmented<ViewMode>
                   value={defaultView}
                   onChange={setDefaultView}
@@ -240,7 +252,7 @@ export function SettingsDialog(): React.JSX.Element | null {
                 />
               </Row>
               <div className="border-t border-border" />
-              <Row label={t('settings.restoreLastRepo')}>
+              <Row label={t('settings.restoreLastRepo')} desc={t('settings.restoreLastRepoDesc')}>
                 <Segmented<'on' | 'off'>
                   value={restoreLastRepo ? 'on' : 'off'}
                   onChange={(v) => setRestoreLastRepo(v === 'on')}
@@ -251,7 +263,7 @@ export function SettingsDialog(): React.JSX.Element | null {
                 />
               </Row>
               <div className="border-t border-border" />
-              <Row label={t('settings.autoFetch')}>
+              <Row label={t('settings.autoFetch')} desc={t('settings.autoFetchDesc')}>
                 <select
                   value={autoFetchMinutes}
                   onChange={(e) => setAutoFetchMinutes(Number(e.target.value))}
@@ -265,7 +277,7 @@ export function SettingsDialog(): React.JSX.Element | null {
                 </select>
               </Row>
               <div className="border-t border-border" />
-              <Row label={t('settings.dateFormat')}>
+              <Row label={t('settings.dateFormat')} desc={t('settings.dateFormatDesc')}>
                 <Segmented<DateFormat>
                   value={dateFormat}
                   onChange={setDateFormat}
@@ -358,7 +370,7 @@ export function SettingsDialog(): React.JSX.Element | null {
               )}
               <div className="border-t border-border" />
 
-              <Row label={t('settings.theme')}>
+              <Row label={t('settings.theme')} desc={t('settings.themeDesc')}>
                 <Segmented<ThemeMode>
                   value={themeMode}
                   onChange={setThemeMode}
@@ -370,7 +382,7 @@ export function SettingsDialog(): React.JSX.Element | null {
                 />
               </Row>
               <div className="border-t border-border" />
-              <Row label={t('settings.zoom')}>
+              <Row label={t('settings.zoom')} desc={t('settings.zoomDesc')}>
                 <button
                   type="button"
                   onClick={() => setFontScale(fontScale - 0.1)}
@@ -431,7 +443,7 @@ export function SettingsDialog(): React.JSX.Element | null {
           {section === 'diff' && (
             <section>
               <h3 className="mb-3 text-sm font-semibold text-fg">{t('settings.diff')}</h3>
-              <Row label={t('settings.diffDefaultView')}>
+              <Row label={t('settings.diffDefaultView')} desc={t('settings.diffDefaultViewDesc')}>
                 <Segmented<DiffMode>
                   value={diffMode}
                   onChange={setDiffMode}
@@ -442,7 +454,7 @@ export function SettingsDialog(): React.JSX.Element | null {
                 />
               </Row>
               <div className="border-t border-border" />
-              <Row label={t('settings.diffWrap')}>
+              <Row label={t('settings.diffWrap')} desc={t('settings.diffWrapDesc')}>
                 <Segmented<'on' | 'off'>
                   value={diffWrap ? 'on' : 'off'}
                   onChange={(v) => setDiffWrap(v === 'on')}
@@ -453,7 +465,7 @@ export function SettingsDialog(): React.JSX.Element | null {
                 />
               </Row>
               <div className="border-t border-border" />
-              <Row label={t('settings.diffTabWidth')}>
+              <Row label={t('settings.diffTabWidth')} desc={t('settings.diffTabWidthDesc')}>
                 <Segmented<string>
                   value={String(diffTabWidth)}
                   onChange={(v) => setDiffTabWidth(Number(v))}

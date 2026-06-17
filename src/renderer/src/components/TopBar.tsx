@@ -8,7 +8,8 @@ import {
   GitPullRequest,
   RefreshCw,
   TerminalSquare,
-  Undo2
+  Undo2,
+  UserRound
 } from 'lucide-react'
 import { useState } from 'react'
 import { useRepoStore } from '../store/repoStore'
@@ -62,6 +63,7 @@ export function TopBar(): React.JSX.Element {
   const activePath = useRepoStore((s) => s.activePath)
   const openReflog = useRepoStore((s) => s.openReflog)
   const openPRPanel = useRepoStore((s) => s.openPRPanel)
+  const openSettings = useRepoStore((s) => s.openSettings)
   const toggleTerminal = useRepoStore((s) => s.toggleTerminal)
   const togglePalette = useRepoStore((s) => s.togglePalette)
   const openRepoModal = useRepoStore((s) => s.openRepoModal)
@@ -143,6 +145,11 @@ export function TopBar(): React.JSX.Element {
           disabled={!hasRepo}
         />
         <ToolButton
+          label={t('actions.identity')}
+          icon={UserRound}
+          onClick={() => openSettings('git')}
+        />
+        <ToolButton
           label={t('actions.terminal')}
           icon={TerminalSquare}
           onClick={toggleTerminal}
@@ -150,11 +157,9 @@ export function TopBar(): React.JSX.Element {
         />
       </div>
 
-      {/* Center: commit search. */}
-      {hasRepo && <SearchInput />}
-
-      {/* Right: command palette, then Open Repository. */}
+      {/* Right: commit search, command palette, then Open Repository. */}
       <div className="flex flex-1 items-center justify-end gap-1.5">
+        {hasRepo && <SearchInput />}
         <button
           type="button"
           onClick={togglePalette}

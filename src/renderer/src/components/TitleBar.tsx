@@ -27,7 +27,7 @@ export function TitleBar(): React.JSX.Element {
   return (
     <header className="drag-region flex h-9 shrink-0 items-center gap-2 border-b border-border bg-surface ps-3 select-none">
       <img src={markUrl} alt="" className="size-6 shrink-0 rounded-[5px]" />
-      <span className="text-base font-semibold tracking-wide">CYREX</span>
+      <span className="text-base font-semibold tracking-wide text-accent">CYREX</span>
       {openName && (
         <>
           <ChevronRight size={16} className="shrink-0 text-fg-subtle" />
@@ -42,7 +42,7 @@ export function TitleBar(): React.JSX.Element {
         <ThemeToggle />
         <button
           type="button"
-          onClick={openSettings}
+          onClick={() => openSettings()}
           title="Settings"
           aria-label="Settings"
           className="rounded-[var(--radius-card)] p-1.5 text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
