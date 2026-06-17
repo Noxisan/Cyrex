@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Check, Cloud, GitBranch, Tag } from 'lucide-react'
 import { computeLayout } from '@shared/graph'
@@ -149,10 +149,39 @@ export function GraphView({ repoPath }: { repoPath: string }): React.JSX.Element
   const search = useSearch(repoPath, searchQuery)
   const [menu, setMenu] = useState<MenuState | null>(null)
 
-  // Infinite history: when the bottom sentinel scrolls into view, pull the next
-  // page. rootMargin prefetches before the user actually hits the end.
+  // Virtualization: only the rows (and graph elements) inside the scroll viewport
+  // are rendered, so a long history stays light no matter how many pages load.
   const scrollRef = useRef<HTMLDivElement>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
+  const [scrollTop, setScrollTop] = useState(0)
+  const [viewportH, setViewportH] = useState(0)
+
+  const onScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    setScrollTop(e.currentTarget.scrollTop)
+  }, [])
+
+  // Track the viewport height (initial + on resize: window, sidebar, panels) and
+  // sync scrollTop from the real element on (re)mount — e.g. returning from search
+  // mounts a fresh container at the top, so stale state must not be trusted.
+  useLayoutEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    setViewportH(el.clientHeight)
+    setScrollTop(el.scrollTop)
+    const ro = new ResizeObserver(() => setViewportH(el.clientHeight))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [commits, searchActive])
+
+  // Reset the scroll position when switching repositories so the window starts
+  // at the top rather than at a stale offset from the previous (longer) history.
+  useEffect(() => {
+    setScrollTop(0)
+    scrollRef.current?.scrollTo(0, 0)
+  }, [repoPath])
+
+  // Infinite history: when the bottom sentinel scrolls into view, pull the next
+  // page. rootMargin prefetches before the user actually hits the end.
   useEffect(() => {
     const root = scrollRef.current
     const target = sentinelRef.current
@@ -245,19 +274,36 @@ export function GraphView({ repoPath }: { repoPath: string }): React.JSX.Element
   const y = (row: number): number => row * ROW_H + ROW_H / 2
   const laneOf = new Map(layout.nodes.map((n) => [n.sha, n.lane]))
 
+  // The window of rows to actually render. Overscan a few rows past the viewport
+  // so scrolling never reveals a blank edge; a fallback height keeps the first
+  // paint (before the viewport is measured) from rendering an empty window.
+  const OVERSCAN = 10
+  const vh = viewportH || 800
+  const firstRow = Math.max(0, Math.floor(scrollTop / ROW_H) - OVERSCAN)
+  const lastRow = Math.min(commits.length, Math.ceil((scrollTop + vh) / ROW_H) + OVERSCAN)
+  const visibleCommits = commits.slice(firstRow, lastRow)
+  // Graph elements that intersect the window. Edges run from a child (smaller
+  // row) to an older parent (larger row), so an edge is visible when its span
+  // overlaps [firstRow, lastRow].
+  const visibleEdges = layout.edges.filter((e) => e.fromRow <= lastRow && e.toRow >= firstRow)
+  const visibleNodes = layout.nodes.filter((n) => n.row >= firstRow && n.row < lastRow)
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-9 shrink-0 items-center border-b border-border px-4 text-xs font-medium uppercase tracking-wide text-fg-muted">
         {t('graph.title')}
       </div>
-      <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-auto">
+      <div ref={scrollRef} onScroll={onScroll} className="relative min-h-0 flex-1 overflow-auto">
         <div
           className="relative"
           style={{ height: totalHeight, minWidth: REFS_W + graphWidth + 320 }}
         >
-          {/* Rows first so their hover/selection backgrounds sit beneath the
-              graph overlay; the graph is then always drawn crisply on top. */}
-          {commits.map((c) => {
+          {/* Spacer occupying the rows above the window so the rendered slice
+              sits at its true vertical position. */}
+          <div aria-hidden style={{ height: firstRow * ROW_H }} />
+          {/* Only the visible window of rows is rendered; their hover/selection
+              backgrounds sit beneath the graph overlay drawn crisply on top. */}
+          {visibleCommits.map((c) => {
             const refs = refsForCommit(c, remotePrefixes)
             const selected = selectedSha === c.sha
             return (
@@ -299,7 +345,7 @@ export function GraphView({ repoPath }: { repoPath: string }): React.JSX.Element
             width={graphWidth}
             height={totalHeight}
           >
-            {layout.edges.map((e, i) => {
+            {visibleEdges.map((e) => {
               const x1 = x(e.fromLane)
               const y1 = y(e.fromRow)
               const x2 = x(e.toLane)
@@ -311,7 +357,7 @@ export function GraphView({ repoPath }: { repoPath: string }): React.JSX.Element
                   : `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`
               return (
                 <path
-                  key={i}
+                  key={`${e.fromRow}-${e.toRow}-${e.fromLane}-${e.toLane}`}
                   d={d}
                   fill="none"
                   stroke={laneColor(e.toLane)}
@@ -320,7 +366,7 @@ export function GraphView({ repoPath }: { repoPath: string }): React.JSX.Element
                 />
               )
             })}
-            {layout.nodes.map((n) => {
+            {visibleNodes.map((n) => {
               const cx = x(n.lane)
               const cy = y(n.row)
               const isHead = n.sha === headSha
