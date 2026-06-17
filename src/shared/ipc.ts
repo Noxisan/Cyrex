@@ -42,6 +42,8 @@ export const IpcChannels = {
   RepoOpenDialog: 'repo:openDialog',
   /** Validate + register a repo path provided directly. */
   RepoOpen: 'repo:open',
+  /** Create a new local repository (git init in parentDir/name). */
+  RepoInit: 'repo:init',
   RepoStatus: 'repo:status',
   RepoLog: 'repo:log',
   RepoBranches: 'repo:branches',
@@ -229,6 +231,10 @@ export interface IpcApi {
   }
   [IpcChannels.RepoOpen]: {
     request: { path: string }
+    response: EngineResult<RepoRef>
+  }
+  [IpcChannels.RepoInit]: {
+    request: { parentDir: string; name: string }
     response: EngineResult<RepoRef>
   }
   [IpcChannels.RepoStatus]: {

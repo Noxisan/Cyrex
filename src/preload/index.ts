@@ -34,6 +34,8 @@ export const cyrexApi = {
   clearRepoIdentity: (path: string) => invoke(IpcChannels.GitClearRepoIdentity, { path }),
   openRepoDialog: () => invoke(IpcChannels.RepoOpenDialog),
   openRepo: (path: string) => invoke(IpcChannels.RepoOpen, { path }),
+  initRepo: (parentDir: string, name: string) =>
+    invoke(IpcChannels.RepoInit, { parentDir, name }),
   status: (path: string) => invoke(IpcChannels.RepoStatus, { path }),
   log: (path: string, options?: Req<typeof IpcChannels.RepoLog>['options']) =>
     invoke(IpcChannels.RepoLog, { path, options }),

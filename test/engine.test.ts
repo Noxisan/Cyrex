@@ -39,6 +39,24 @@ afterAll(async () => {
   await Promise.all(tmpRepos.map((d) => rm(d, { recursive: true, force: true })))
 })
 
+describe('engine.initRepo', () => {
+  it('creates a new repo on main and refuses to clobber an existing folder', async () => {
+    const parent = await mkdtemp(join(tmpdir(), 'cyrex-init-'))
+    tmpRepos.push(parent)
+
+    const ref = await engine.initRepo(parent, 'fresh')
+    expect(ref.name).toBe('fresh')
+    expect(ref.path).toBe(join(parent, 'fresh'))
+
+    const status = await engine.status(ref.path)
+    expect(status.branch).toBe('main')
+    expect(status.clean).toBe(true)
+
+    // A second init at the same path must not overwrite the folder.
+    await expect(engine.initRepo(parent, 'fresh')).rejects.toBeDefined()
+  })
+})
+
 describe('engine.openRepo / status', () => {
   it('opens a repo and reports a clean tree after a commit', async () => {
     const dir = await makeRepo()

@@ -48,10 +48,45 @@
     "rebaseMessage": "{{source}} auf {{target}} rebasen? Dies schreibt die Historie von {{source}} um, indem die Commits auf {{target}} neu aufgespielt werden — über Rückgängig (Reflog) wiederherstellbar."
   },
   "openRepo": {
+    "title": "Repositories",
     "local": "Auf diesem Computer",
     "openFolder": "Ordner öffnen…",
     "recent": "Zuletzt verwendet",
-    "remote": "Remote"
+    "remote": "Remote",
+    "modeOpen": "Öffnen",
+    "modeClone": "Klonen",
+    "modeCreate": "Erstellen",
+    "open": {
+      "heading": "Lokales Repository öffnen",
+      "subtitle": "Wähle einen Ordner, der bereits ein Git-Repository enthält.",
+      "searchRecent": "Zuletzt verwendete durchsuchen…",
+      "noRecent": "Noch keine zuletzt verwendeten Repositories."
+    },
+    "clone": {
+      "heading": "Repository klonen",
+      "fromAccount": "Deine Repositories",
+      "fromUrl": "Von URL",
+      "urlLabel": "Repository-URL",
+      "urlPlaceholder": "https://… oder git@host:owner/repo.git",
+      "connectPrompt": "Verbinde ein Konto, um deine Repositories zu durchsuchen und zu klonen.",
+      "destination": "Klonen nach",
+      "folderName": "Ordnername",
+      "willClone": "Klont nach {{path}}"
+    },
+    "create": {
+      "heading": "Neues Repository erstellen",
+      "subtitle": "Initialisiert ein frisches Git-Repository in einem neuen Ordner auf diesem Computer.",
+      "name": "Repository-Name",
+      "namePlaceholder": "mein-projekt",
+      "location": "Speicherort",
+      "willCreate": "Erstellt {{path}}",
+      "submit": "Repository erstellen",
+      "creating": "Wird erstellt…",
+      "done": "{{name}} erstellt",
+      "hostHint": "Lieber auf einem Host?",
+      "hostLink": "Auf GitHub, GitLab oder Bitbucket erstellen"
+    },
+    "chooseFolder": "Ordner wählen…"
   },
   "hosting": {
     "accounts": "Konten",

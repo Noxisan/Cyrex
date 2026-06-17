@@ -48,10 +48,45 @@
     "rebaseMessage": "Rebase {{source}} onto {{target}}? This rewrites {{source}}'s history by replaying its commits on top of {{target}} — recoverable via Undo (reflog)."
   },
   "openRepo": {
+    "title": "Repositories",
     "local": "On this computer",
     "openFolder": "Open a folder…",
     "recent": "Recent",
-    "remote": "Remote"
+    "remote": "Remote",
+    "modeOpen": "Open",
+    "modeClone": "Clone",
+    "modeCreate": "Create",
+    "open": {
+      "heading": "Open a local repository",
+      "subtitle": "Choose a folder that already contains a Git repository.",
+      "searchRecent": "Search recent…",
+      "noRecent": "No recent repositories yet."
+    },
+    "clone": {
+      "heading": "Clone a repository",
+      "fromAccount": "Your repositories",
+      "fromUrl": "From URL",
+      "urlLabel": "Repository URL",
+      "urlPlaceholder": "https://… or git@host:owner/repo.git",
+      "connectPrompt": "Connect an account to browse and clone your repositories.",
+      "destination": "Clone into",
+      "folderName": "Folder name",
+      "willClone": "Clones into {{path}}"
+    },
+    "create": {
+      "heading": "Create a new repository",
+      "subtitle": "Initialize a fresh Git repository in a new folder on this computer.",
+      "name": "Repository name",
+      "namePlaceholder": "my-project",
+      "location": "Location",
+      "willCreate": "Creates {{path}}",
+      "submit": "Create repository",
+      "creating": "Creating…",
+      "done": "Created {{name}}",
+      "hostHint": "Want it on a host instead?",
+      "hostLink": "Create on GitHub, GitLab, or Bitbucket"
+    },
+    "chooseFolder": "Choose folder…"
   },
   "hosting": {
     "accounts": "Accounts",
