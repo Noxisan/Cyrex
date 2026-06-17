@@ -6,7 +6,14 @@
 
 import { create } from 'zustand'
 import type { RepoRef } from '@shared/types'
-import { TEMPLATES, TEMPLATE_VARS, isNamedTemplate } from '../lib/templates'
+import {
+  TEMPLATES,
+  TEMPLATE_VARS,
+  isNamedTemplate,
+  CUSTOM_ID,
+  DEFAULT_CUSTOM_VARS,
+  DEFAULT_CUSTOM_DARK
+} from '../lib/templates'
 
 /** The resolved, applied theme (what `data-theme` is set to). */
 export type Theme = 'dark' | 'light'
@@ -90,6 +97,9 @@ interface RepoState {
   accent: string
   /** Selected theme template id (see TEMPLATES); 'classic' uses theme+accent. */
   template: string
+  /** The user's Custom template colors (CSS var → hex) and its dark/light base. */
+  customColors: Record<string, string>
+  customDark: boolean
   /** Which view a repository opens into. */
   defaultView: ViewMode
 
@@ -125,6 +135,8 @@ interface RepoState {
   toggleTheme: () => void
   setAccent: (id: string) => void
   setTemplate: (id: string) => void
+  setCustomColor: (name: string, value: string) => void
+  setCustomDark: (dark: boolean) => void
   setDefaultView: (view: ViewMode) => void
 }
 
@@ -133,6 +145,7 @@ const THEME_KEY = 'cyrex.theme'
 const THEME_MODE_KEY = 'cyrex.themeMode'
 const ACCENT_KEY = 'cyrex.accent'
 const TEMPLATE_KEY = 'cyrex.template'
+const CUSTOM_KEY = 'cyrex.customTemplate'
 const DEFAULT_VIEW_KEY = 'cyrex.defaultView'
 
 function initialTemplate(): string {
@@ -193,8 +206,26 @@ export function applyAccent(id: string): void {
   root.style.setProperty('--color-accent-hover', p.hover)
 }
 
+/** Load the user's Custom template (colors + dark/light) from localStorage. */
+function loadCustom(): { dark: boolean; vars: Record<string, string> } {
+  try {
+    const raw = localStorage.getItem(CUSTOM_KEY)
+    if (raw) {
+      const c = JSON.parse(raw) as { dark?: boolean; vars?: Record<string, string> }
+      return {
+        dark: typeof c.dark === 'boolean' ? c.dark : DEFAULT_CUSTOM_DARK,
+        vars: { ...DEFAULT_CUSTOM_VARS, ...(c.vars ?? {}) }
+      }
+    }
+  } catch {
+    /* fall back to defaults */
+  }
+  return { dark: DEFAULT_CUSTOM_DARK, vars: { ...DEFAULT_CUSTOM_VARS } }
+}
+
 /** The concrete dark/light a template+mode resolves to (named templates fix it). */
 function resolvedTheme(template: string, mode: ThemeMode): Theme {
+  if (template === CUSTOM_ID) return loadCustom().dark ? 'dark' : 'light'
   if (isNamedTemplate(template)) {
     return TEMPLATES.find((t) => t.id === template)?.dark ? 'dark' : 'light'
   }
@@ -202,18 +233,21 @@ function resolvedTheme(template: string, mode: ThemeMode): Theme {
 }
 
 /**
- * Apply the full appearance: a named template overrides the base + accent CSS
- * variables (and fixes light/dark); `classic` clears those overrides and honors
- * the theme-mode + accent picker. Diff/syntax tokens follow `data-theme`.
+ * Apply the full appearance: a named template (incl. the user's Custom one)
+ * overrides the base + accent CSS variables and fixes light/dark; `classic`
+ * clears those overrides and honors the theme-mode + accent picker. Diff/syntax
+ * tokens follow `data-theme`.
  */
 export function applyAppearance(template: string, mode: ThemeMode, accentId: string): void {
   const root = document.documentElement
   applyTheme(resolvedTheme(template, mode))
-  const tpl = TEMPLATES.find((t) => t.id === template)
-  if (tpl && isNamedTemplate(template)) {
+  const vars =
+    template === CUSTOM_ID
+      ? loadCustom().vars
+      : (TEMPLATES.find((t) => t.id === template)?.vars ?? {})
+  if (isNamedTemplate(template)) {
     for (const v of TEMPLATE_VARS) {
-      const val = tpl.vars[v]
-      if (val) root.style.setProperty(v, val)
+      if (vars[v]) root.style.setProperty(v, vars[v])
       else root.style.removeProperty(v)
     }
   } else {
@@ -244,6 +278,8 @@ export const useRepoStore = create<RepoState>((set, get) => ({
   themeMode: initialThemeMode(),
   accent: initialAccent().id,
   template: initialTemplate(),
+  customColors: loadCustom().vars,
+  customDark: loadCustom().dark,
   defaultView: initialDefaultView(),
 
   addRepo: (repo) =>
@@ -344,6 +380,23 @@ export const useRepoStore = create<RepoState>((set, get) => ({
     const s = get()
     applyAppearance(id, s.themeMode, s.accent)
     set({ template: id, theme: resolvedTheme(id, s.themeMode) })
+  },
+
+  setCustomColor: (name, value) => {
+    const customColors = { ...get().customColors, [name]: value }
+    localStorage.setItem(CUSTOM_KEY, JSON.stringify({ dark: get().customDark, vars: customColors }))
+    set({ customColors })
+    // Live-apply only when the Custom template is the active one.
+    if (get().template === CUSTOM_ID) applyAppearance(CUSTOM_ID, get().themeMode, get().accent)
+  },
+
+  setCustomDark: (dark) => {
+    localStorage.setItem(CUSTOM_KEY, JSON.stringify({ dark, vars: get().customColors }))
+    set({ customDark: dark })
+    if (get().template === CUSTOM_ID) {
+      applyAppearance(CUSTOM_ID, get().themeMode, get().accent)
+      set({ theme: resolvedTheme(CUSTOM_ID, get().themeMode) })
+    }
   },
 
   setDefaultView: (view) => {

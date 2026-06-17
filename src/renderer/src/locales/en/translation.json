@@ -198,6 +198,19 @@
     "themeSystem": "System",
     "template": "Theme template",
     "templateHint": "Pick a full color scheme. Theme and accent below apply to the Classic template.",
+    "custom": {
+      "title": "Custom colors",
+      "bg": "Background",
+      "surface": "Surface",
+      "surface2": "Surface (raised)",
+      "border": "Border",
+      "fg": "Text",
+      "fgMuted": "Text (muted)",
+      "fgSubtle": "Text (subtle)",
+      "accent": "Accent",
+      "accentHover": "Accent (hover)",
+      "accentFg": "Accent text"
+    },
     "accent": "Accent color",
     "accentHint": "Used for active branches, primary buttons, links and selection. Diff, conflict and danger colors stay fixed.",
     "shortcut": {

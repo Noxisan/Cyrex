@@ -14,7 +14,7 @@ import {
 import { ACCENTS, useRepoStore } from '../store/repoStore'
 import type { ThemeMode, ViewMode } from '../store/repoStore'
 import { useShortcutsStore } from '../store/shortcutsStore'
-import { TEMPLATES } from '../lib/templates'
+import { TEMPLATES, CUSTOM_ID, CUSTOM_FIELDS } from '../lib/templates'
 import { SHORTCUT_COMMANDS, comboFromEvent, comboKeys } from '../lib/shortcuts'
 import { MOD_KEY as MOD } from '../lib/platform'
 import { LANGUAGES } from '../i18n'
@@ -82,6 +82,10 @@ export function SettingsDialog(): React.JSX.Element | null {
   const setAccent = useRepoStore((s) => s.setAccent)
   const template = useRepoStore((s) => s.template)
   const setTemplate = useRepoStore((s) => s.setTemplate)
+  const customColors = useRepoStore((s) => s.customColors)
+  const customDark = useRepoStore((s) => s.customDark)
+  const setCustomColor = useRepoStore((s) => s.setCustomColor)
+  const setCustomDark = useRepoStore((s) => s.setCustomDark)
   const defaultView = useRepoStore((s) => s.defaultView)
   const setDefaultView = useRepoStore((s) => s.setDefaultView)
   const bindings = useShortcutsStore((s) => s.bindings)
@@ -216,31 +220,75 @@ export function SettingsDialog(): React.JSX.Element | null {
                 {t('settings.templateHint')}
               </p>
               <div className="mb-3 grid grid-cols-3 gap-2">
-                {TEMPLATES.map((tpl) => (
-                  <button
-                    key={tpl.id}
-                    type="button"
-                    onClick={() => setTemplate(tpl.id)}
-                    className={`flex flex-col gap-1.5 rounded-[var(--radius-card)] border p-1.5 text-start transition-colors ${
-                      template === tpl.id
-                        ? 'border-accent bg-surface-2'
-                        : 'border-border hover:bg-surface-2'
-                    }`}
-                  >
-                    <span className="flex h-5 overflow-hidden rounded-[4px]">
-                      {tpl.swatch.map((c, i) => (
-                        <span key={i} className="flex-1" style={{ background: c }} />
-                      ))}
-                    </span>
-                    <span className="flex items-center gap-1 truncate text-[11px] text-fg">
-                      {template === tpl.id && (
-                        <Check size={11} strokeWidth={3} className="shrink-0 text-accent" />
-                      )}
-                      <span className="truncate">{tpl.label}</span>
-                    </span>
-                  </button>
-                ))}
+                {TEMPLATES.map((tpl) => {
+                  // The Custom card previews the user's live colors.
+                  const sw =
+                    tpl.id === CUSTOM_ID
+                      ? [
+                          customColors['--color-bg'],
+                          customColors['--color-surface'],
+                          customColors['--color-accent'],
+                          customColors['--color-fg']
+                        ]
+                      : tpl.swatch
+                  return (
+                    <button
+                      key={tpl.id}
+                      type="button"
+                      onClick={() => setTemplate(tpl.id)}
+                      className={`flex flex-col gap-1.5 rounded-[var(--radius-card)] border p-1.5 text-start transition-colors ${
+                        template === tpl.id
+                          ? 'border-accent bg-surface-2'
+                          : 'border-border hover:bg-surface-2'
+                      }`}
+                    >
+                      <span className="flex h-5 overflow-hidden rounded-[4px]">
+                        {sw.map((c, i) => (
+                          <span key={i} className="flex-1" style={{ background: c }} />
+                        ))}
+                      </span>
+                      <span className="flex items-center gap-1 truncate text-[11px] text-fg">
+                        {template === tpl.id && (
+                          <Check size={11} strokeWidth={3} className="shrink-0 text-accent" />
+                        )}
+                        <span className="truncate">{tpl.label}</span>
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
+
+              {template === CUSTOM_ID && (
+                <div className="mb-3 rounded-[var(--radius-card)] border border-border p-3">
+                  <div className="mb-3 flex items-center justify-between">
+                    <span className="text-xs text-fg">{t('settings.custom.title')}</span>
+                    <Segmented<'light' | 'dark'>
+                      value={customDark ? 'dark' : 'light'}
+                      onChange={(v) => setCustomDark(v === 'dark')}
+                      options={[
+                        { value: 'light', label: t('settings.themeLight'), icon: Sun },
+                        { value: 'dark', label: t('settings.themeDark'), icon: Moon }
+                      ]}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                    {CUSTOM_FIELDS.map((f) => (
+                      <label
+                        key={f.var}
+                        className="flex items-center justify-between gap-2 text-[11px] text-fg-muted"
+                      >
+                        <span className="truncate">{t(f.labelKey)}</span>
+                        <input
+                          type="color"
+                          value={customColors[f.var] ?? '#000000'}
+                          onChange={(e) => setCustomColor(f.var, e.target.value)}
+                          className="h-5 w-8 shrink-0 cursor-pointer rounded border border-border bg-transparent p-0"
+                        />
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="border-t border-border" />
 
               <Row label={t('settings.theme')}>

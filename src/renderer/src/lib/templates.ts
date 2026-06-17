@@ -36,9 +36,42 @@ export const TEMPLATE_VARS = [
   '--color-accent-fg'
 ] as const
 
-type Vars = Record<(typeof TEMPLATE_VARS)[number], string>
+export type TemplateVar = (typeof TEMPLATE_VARS)[number]
+type Vars = Record<TemplateVar, string>
 
 const make = (v: Vars): Record<string, string> => v
+
+/** The user-editable Custom template. */
+export const CUSTOM_ID = 'custom'
+
+/** Starting point for the Custom template (the built-in dark scheme). */
+export const DEFAULT_CUSTOM_DARK = true
+export const DEFAULT_CUSTOM_VARS: Vars = {
+  '--color-bg': '#0e0f12',
+  '--color-surface': '#16181d',
+  '--color-surface-2': '#1c1f26',
+  '--color-border': '#2a2e37',
+  '--color-fg': '#e7e9ee',
+  '--color-fg-muted': '#9aa0ab',
+  '--color-fg-subtle': '#6b7280',
+  '--color-accent': '#f7374f',
+  '--color-accent-hover': '#ff4d63',
+  '--color-accent-fg': '#ffffff'
+}
+
+/** The Custom template's editable fields, in display order. */
+export const CUSTOM_FIELDS: { var: TemplateVar; labelKey: string }[] = [
+  { var: '--color-bg', labelKey: 'settings.custom.bg' },
+  { var: '--color-surface', labelKey: 'settings.custom.surface' },
+  { var: '--color-surface-2', labelKey: 'settings.custom.surface2' },
+  { var: '--color-border', labelKey: 'settings.custom.border' },
+  { var: '--color-fg', labelKey: 'settings.custom.fg' },
+  { var: '--color-fg-muted', labelKey: 'settings.custom.fgMuted' },
+  { var: '--color-fg-subtle', labelKey: 'settings.custom.fgSubtle' },
+  { var: '--color-accent', labelKey: 'settings.custom.accent' },
+  { var: '--color-accent-hover', labelKey: 'settings.custom.accentHover' },
+  { var: '--color-accent-fg', labelKey: 'settings.custom.accentFg' }
+]
 
 export const TEMPLATES: Template[] = [
   {
@@ -137,11 +170,23 @@ export const TEMPLATES: Template[] = [
       '--color-accent-hover': '#248b7e',
       '--color-accent-fg': '#ffffff'
     })
+  },
+  {
+    id: CUSTOM_ID,
+    label: 'Custom',
+    // Live colors come from the store; this is just the picker placeholder.
+    swatch: ['#16181d', '#2a2e37', '#f7374f', '#e7e9ee'],
+    dark: DEFAULT_CUSTOM_DARK,
+    vars: make({ ...DEFAULT_CUSTOM_VARS })
   }
 ]
 
-/** Whether a template id carries explicit overrides (i.e. not Classic). */
+/**
+ * Whether a template id carries explicit overrides (i.e. not Classic). The
+ * Custom template always counts — its colors are user-supplied at runtime.
+ */
 export function isNamedTemplate(id: string): boolean {
+  if (id === CUSTOM_ID) return true
   const tpl = TEMPLATES.find((t) => t.id === id)
   return !!tpl && Object.keys(tpl.vars).length > 0
 }

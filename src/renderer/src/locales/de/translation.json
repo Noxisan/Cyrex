@@ -198,6 +198,19 @@
     "themeSystem": "System",
     "template": "Design-Vorlage",
     "templateHint": "Wähle ein komplettes Farbschema. Thema und Akzent unten gelten für die Vorlage „Classic“.",
+    "custom": {
+      "title": "Eigene Farben",
+      "bg": "Hintergrund",
+      "surface": "Oberfläche",
+      "surface2": "Oberfläche (erhöht)",
+      "border": "Rahmen",
+      "fg": "Text",
+      "fgMuted": "Text (gedämpft)",
+      "fgSubtle": "Text (dezent)",
+      "accent": "Akzent",
+      "accentHover": "Akzent (Hover)",
+      "accentFg": "Akzent-Text"
+    },
     "accent": "Akzentfarbe",
     "accentHint": "Für aktive Branches, primäre Schaltflächen, Links und Auswahl. Diff-, Konflikt- und Gefahrenfarben bleiben unverändert.",
     "shortcut": {
