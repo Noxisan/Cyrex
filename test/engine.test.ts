@@ -169,3 +169,75 @@ describe('engine.stash', () => {
     expect(stashes[0].message).toContain('work in progress')
   })
 })
+
+describe('engine.commitDiff / workingDiff', () => {
+  it('parses a commit diff into files, hunks, and line counts', async () => {
+    const dir = await makeRepo()
+    await commitFile(dir, 'x.txt', 'a\nb\nc\n', 'first')
+    await commitFile(dir, 'x.txt', 'a\nB\nc\nd\n', 'second')
+
+    const headSha = (await engine.log(dir))[0].sha
+    const diff = await engine.commitDiff(dir, headSha)
+    expect(diff.files).toHaveLength(1)
+    const file = diff.files[0]
+    expect(file.path).toBe('x.txt')
+    expect(file.binary).toBe(false)
+    expect(file.additions).toBeGreaterThanOrEqual(1)
+    expect(file.hunks.length).toBeGreaterThanOrEqual(1)
+    // The appended line "d" shows up as an added line in some hunk.
+    const allLines = file.hunks.flatMap((h) => h.lines)
+    expect(allLines.some((l) => l.kind === 'add' && l.content === 'd')).toBe(true)
+  })
+
+  it('parses an unstaged working-tree diff', async () => {
+    const dir = await makeRepo()
+    await commitFile(dir, 'n.txt', '1\n2\n3\n', 'init')
+    await writeFile(join(dir, 'n.txt'), '1\n2\n3\n4\n')
+
+    const diff = await engine.workingDiff(dir, { file: 'n.txt', staged: false, untracked: false })
+    expect(diff.files).toHaveLength(1)
+    expect(diff.files[0].path).toBe('n.txt')
+    expect(diff.files[0].additions).toBeGreaterThanOrEqual(1)
+    const added = diff.files[0].hunks.flatMap((h) => h.lines).filter((l) => l.kind === 'add')
+    expect(added.some((l) => l.content === '4')).toBe(true)
+  })
+})
+
+describe('engine.reflog', () => {
+  it('parses reflog entries with selectors and action verbs', async () => {
+    const dir = await makeRepo()
+    await commitFile(dir, 'f.txt', '1\n', 'first')
+    await commitFile(dir, 'f.txt', '2\n', 'second')
+
+    const entries = await engine.reflog(dir)
+    expect(entries.length).toBeGreaterThanOrEqual(2)
+    expect(entries[0].selector).toBe('HEAD@{0}')
+    expect(entries[0].index).toBe(0)
+    // The most recent reflog action is the second commit.
+    expect(entries[0].action.toLowerCase()).toContain('commit')
+    expect(entries[0].sha).toMatch(/^[0-9a-f]{40}$/)
+  })
+})
+
+describe('engine.status (merge conflict)', () => {
+  it('detects conflicted files and an in-progress merge operation', async () => {
+    const dir = await makeRepo()
+    await commitFile(dir, 'c.txt', 'line1\nline2\n', 'base')
+
+    // Diverging change on a branch...
+    await engine.createBranch(dir, 'other', { checkout: true })
+    await commitFile(dir, 'c.txt', 'line1\nOTHER\n', 'other change')
+
+    // ...conflicting change on main.
+    await engine.checkout(dir, 'main')
+    await commitFile(dir, 'c.txt', 'line1\nMAIN\n', 'main change')
+
+    // Merging the branch conflicts; the engine surfaces it (does not auto-resolve).
+    await expect(engine.merge(dir, 'other')).rejects.toBeDefined()
+
+    const status = await engine.status(dir)
+    expect(status.clean).toBe(false)
+    expect(status.operation).toBe('merge')
+    expect(status.conflicted.map((f) => f.path)).toContain('c.txt')
+  })
+})
