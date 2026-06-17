@@ -39,12 +39,19 @@ function send(s: Session, channel: string, payload: unknown): void {
   if (!s.sender.isDestroyed()) s.sender.send(channel, payload)
 }
 
-/** Shell + single-command flag for the current platform. */
-function shellInvocation(): { cmd: string; flag: string } {
+/** Shell + the argv that precedes the command, for the current platform. */
+function shellInvocation(): { cmd: string; args: string[] } {
   if (process.platform === 'win32') {
-    return { cmd: process.env.ComSpec || 'cmd.exe', flag: '/c' }
+    return { cmd: process.env.ComSpec || 'cmd.exe', args: ['/c'] }
   }
-  return { cmd: process.env.SHELL || '/bin/bash', flag: '-c' }
+  const sh = process.env.SHELL || '/bin/bash'
+  // fish sources config.fish even for `-c`, so interactive aliases (e.g. an
+  // `ls` function wrapping `eza --icons --color=always`) leak into this
+  // pipe-based, non-TTY runner and produce broken or empty output. Skip config
+  // so a command resolves to the real binary — matching how bash/zsh `-c`
+  // already ignore their rc files (they need no extra flag).
+  if (/(^|\/)fish$/.test(sh)) return { cmd: sh, args: ['--no-config', '-c'] }
+  return { cmd: sh, args: ['-c'] }
 }
 
 function createSession(sender: WebContents, cwd: string): TerminalSession {
@@ -86,10 +93,10 @@ function runCommand(sender: WebContents, id: string, line: string): void {
     return
   }
 
-  const { cmd, flag } = shellInvocation()
+  const { cmd, args } = shellInvocation()
   let child: ChildProcess
   try {
-    child = spawn(cmd, [flag, command], { cwd: s.cwd, env: process.env, windowsHide: true })
+    child = spawn(cmd, [...args, command], { cwd: s.cwd, env: process.env, windowsHide: true })
   } catch (err) {
     send(s, TerminalChannels.Data, { id, chunk: `${scrubSecrets((err as Error).message)}\n` })
     send(s, TerminalChannels.Exit, { id, code: 1, cwd: s.cwd })
