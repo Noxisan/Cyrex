@@ -7,10 +7,21 @@ import { highlightLine, languageForPath } from '../lib/highlight'
 import { ImageDiff, isImagePath } from './ImageDiff'
 
 /** A line's content, syntax-highlighted for the file's language. */
-function Code({ content, lang }: { content: string; lang: string | null }): React.JSX.Element {
+function Code({
+  content,
+  lang,
+  wrap,
+  tabWidth
+}: {
+  content: string
+  lang: string | null
+  wrap: boolean
+  tabWidth: number
+}): React.JSX.Element {
   return (
     <span
-      className="whitespace-pre"
+      className={wrap ? 'min-w-0 flex-1 whitespace-pre-wrap break-words' : 'whitespace-pre'}
+      style={{ tabSize: tabWidth }}
       dangerouslySetInnerHTML={{ __html: highlightLine(content, lang) || ' ' }}
     />
   )
@@ -99,12 +110,16 @@ function toRows(lines: DiffLine[]): { left?: DiffLine; right?: DiffLine }[] {
 function InlineHunkLine({
   line,
   lang,
+  wrap,
+  tabWidth,
   selectable,
   selected,
   onToggle
 }: {
   line: DiffLine
   lang: string | null
+  wrap: boolean
+  tabWidth: number
   selectable: boolean
   selected: boolean
   onToggle?: () => void
@@ -122,12 +137,22 @@ function InlineHunkLine({
       <span className="w-4 shrink-0 select-none text-center text-fg-subtle">
         {gutterMark(line.kind)}
       </span>
-      <Code content={line.content} lang={lang} />
+      <Code content={line.content} lang={lang} wrap={wrap} tabWidth={tabWidth} />
     </div>
   )
 }
 
-function SplitCell({ line, lang }: { line?: DiffLine; lang: string | null }): React.JSX.Element {
+function SplitCell({
+  line,
+  lang,
+  wrap,
+  tabWidth
+}: {
+  line?: DiffLine
+  lang: string | null
+  wrap: boolean
+  tabWidth: number
+}): React.JSX.Element {
   if (!line) return <div className="flex-1 bg-surface-2/30" />
   const num = line.kind === 'add' ? line.newNumber : line.oldNumber
   return (
@@ -136,7 +161,7 @@ function SplitCell({ line, lang }: { line?: DiffLine; lang: string | null }): Re
       <span className="w-3 shrink-0 select-none text-center text-fg-subtle">
         {gutterMark(line.kind)}
       </span>
-      <Code content={line.content} lang={lang} />
+      <Code content={line.content} lang={lang} wrap={wrap} tabWidth={tabWidth} />
     </div>
   )
 }
@@ -171,6 +196,8 @@ function FileBlock({
   file,
   fileHunkBase,
   mode,
+  wrap,
+  tabWidth,
   actions,
   repoPath,
   source
@@ -179,6 +206,8 @@ function FileBlock({
   /** Index of this file's first hunk in the engine's view (single-file = 0). */
   fileHunkBase: number
   mode: ViewMode
+  wrap: boolean
+  tabWidth: number
   actions?: DiffActions
   /** Set together to enable visual image diffs for binary image files. */
   repoPath?: string
@@ -273,7 +302,7 @@ function FileBlock({
               const engineHunk = fileHunkBase + hi
               const selectableInline = !!actions && mode === 'inline'
               return (
-                <div key={hi} className="min-w-max">
+                <div key={hi} className={wrap ? '' : 'min-w-max'}>
                   <div className="flex items-center gap-2 bg-surface-2/60 px-3 py-0.5 font-mono text-[11px] text-fg-subtle">
                     <span className="min-w-0 flex-1 truncate">{hunk.header}</span>
                     {actions && (
@@ -321,6 +350,8 @@ function FileBlock({
                           key={li}
                           line={l}
                           lang={lang}
+                          wrap={wrap}
+                          tabWidth={tabWidth}
                           selectable={selectableInline && l.kind !== 'context'}
                           selected={sel?.hunk === engineHunk && sel.lines.has(li)}
                           onToggle={() => toggleLine(engineHunk, li)}
@@ -328,9 +359,9 @@ function FileBlock({
                       ))
                     : toRows(hunk.lines).map((row, ri) => (
                         <div key={ri} className="flex">
-                          <SplitCell line={row.left} lang={lang} />
+                          <SplitCell line={row.left} lang={lang} wrap={wrap} tabWidth={tabWidth} />
                           <span className="w-px shrink-0 bg-border" />
-                          <SplitCell line={row.right} lang={lang} />
+                          <SplitCell line={row.right} lang={lang} wrap={wrap} tabWidth={tabWidth} />
                         </div>
                       ))}
                 </div>
@@ -394,7 +425,11 @@ export function DiffPanel({
   source?: DiffSource
 }): React.JSX.Element {
   const { t } = useTranslation()
-  const [mode, setMode] = useState<ViewMode>('inline')
+  // The layout toggle is the persisted default (also editable in Settings).
+  const mode = useRepoStore((s) => s.diffMode)
+  const setMode = useRepoStore((s) => s.setDiffMode)
+  const wrap = useRepoStore((s) => s.diffWrap)
+  const tabWidth = useRepoStore((s) => s.diffTabWidth)
 
   const totalAdd = files?.reduce((s, f) => s + f.additions, 0) ?? 0
   const totalDel = files?.reduce((s, f) => s + f.deletions, 0) ?? 0
@@ -446,6 +481,8 @@ export function DiffPanel({
               file={file}
               fileHunkBase={base}
               mode={mode}
+              wrap={wrap}
+              tabWidth={tabWidth}
               actions={actions}
               repoPath={repoPath}
               source={source}

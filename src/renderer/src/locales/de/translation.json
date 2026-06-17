@@ -279,6 +279,12 @@
     "zoomIn": "Textgröße erhöhen",
     "zoomOut": "Textgröße verringern",
     "zoomReset": "Auf 100% zurücksetzen",
+    "diff": "Diff",
+    "diffDefaultView": "Standardlayout",
+    "diffWrap": "Lange Zeilen umbrechen",
+    "diffTabWidth": "Tab-Breite",
+    "on": "An",
+    "off": "Aus",
     "template": "Design-Vorlage",
     "templateHint": "Wähle ein komplettes Farbschema. Thema und Akzent unten gelten für die Vorlage „Classic“.",
     "custom": {
