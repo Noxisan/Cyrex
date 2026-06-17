@@ -38,6 +38,9 @@ function fixedShortcuts(t: (k: string) => string): { keys: string[]; label: stri
     { keys: ['G', 'H'], label: t('settings.shortcut.goHistory') },
     { keys: ['G', 'C'], label: t('settings.shortcut.goChanges') },
     { keys: [`${MOD}`, '↵'], label: t('settings.shortcut.commit') },
+    { keys: [`${MOD}`, '+'], label: t('settings.zoomIn') },
+    { keys: [`${MOD}`, '−'], label: t('settings.zoomOut') },
+    { keys: [`${MOD}`, '0'], label: t('settings.zoomReset') },
     { keys: ['Esc'], label: t('settings.shortcut.dismiss') }
   ]
 }

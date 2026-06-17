@@ -25,7 +25,13 @@ export const SHORTCUT_COMMANDS: ShortcutCommand[] = [
   { id: 'changes', labelKey: 'settings.shortcut.goChanges', defaultCombo: 'mod+2', needsRepo: true },
   { id: 'terminal', labelKey: 'palette.toggleTerminal', defaultCombo: 'mod+j', needsRepo: true },
   { id: 'theme', labelKey: 'palette.toggleTheme', defaultCombo: 'mod+shift+l', needsRepo: false },
-  { id: 'undo', labelKey: 'palette.openUndo', defaultCombo: 'mod+shift+u', needsRepo: true }
+  { id: 'undo', labelKey: 'palette.openUndo', defaultCombo: 'mod+shift+u', needsRepo: true },
+  {
+    id: 'pullRequests',
+    labelKey: 'actions.pullRequests',
+    defaultCombo: 'mod+shift+p',
+    needsRepo: true
+  }
 ]
 
 export const DEFAULT_BINDINGS: Record<string, string> = Object.fromEntries(
