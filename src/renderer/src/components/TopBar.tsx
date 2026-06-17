@@ -5,6 +5,7 @@ import {
   Archive,
   Command,
   FolderOpen,
+  GitPullRequest,
   RefreshCw,
   TerminalSquare,
   Undo2
@@ -46,8 +47,12 @@ function ToolButton({
       aria-label={label}
       className="flex items-center gap-1.5 rounded-[var(--radius-card)] px-2.5 py-1.5 text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg disabled:cursor-not-allowed disabled:opacity-40"
     >
-      <Icon size={16} strokeWidth={1.75} className={loading ? 'animate-spin' : undefined} />
-      <span className="hidden text-xs lg:inline">{label}</span>
+      <Icon
+        size={16}
+        strokeWidth={1.75}
+        className={`shrink-0 ${loading ? 'animate-spin' : ''}`}
+      />
+      <span className="hidden whitespace-nowrap text-xs lg:inline">{label}</span>
     </button>
   )
 }
@@ -56,6 +61,7 @@ export function TopBar(): React.JSX.Element {
   const { t } = useTranslation()
   const activePath = useRepoStore((s) => s.activePath)
   const openReflog = useRepoStore((s) => s.openReflog)
+  const openPRPanel = useRepoStore((s) => s.openPRPanel)
   const toggleTerminal = useRepoStore((s) => s.toggleTerminal)
   const togglePalette = useRepoStore((s) => s.togglePalette)
   const openRepoModal = useRepoStore((s) => s.openRepoModal)
@@ -130,6 +136,12 @@ export function TopBar(): React.JSX.Element {
         />
         <ToolButton label={t('actions.stash')} icon={Archive} onClick={stash} disabled={!hasRepo} />
         <ToolButton label={t('actions.undo')} icon={Undo2} onClick={openReflog} disabled={!hasRepo} />
+        <ToolButton
+          label={t('actions.pullRequests')}
+          icon={GitPullRequest}
+          onClick={openPRPanel}
+          disabled={!hasRepo}
+        />
         <ToolButton
           label={t('actions.terminal')}
           icon={TerminalSquare}
