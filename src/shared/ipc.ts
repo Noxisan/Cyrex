@@ -30,6 +30,7 @@ import type {
   ReflogEntry,
   RemoteRepo,
   RepoRef,
+  UpdateInfo,
   RepoStatus,
   Stash,
   Submodule,
@@ -141,6 +142,10 @@ export const IpcChannels = {
   GitClearRepoIdentity: 'git:clearRepoIdentity',
   /** Returns which engine backend is active (cli | nodegit). */
   EngineInfo: 'engine:info',
+  /** The running app version. */
+  AppVersion: 'app:version',
+  /** Check the GitHub releases for a newer Cyrex version. */
+  AppCheckUpdates: 'app:checkUpdates',
   /** Open a directory picker, returning the chosen path (or null). */
   PickDirectory: 'dialog:pickDirectory',
   // --- Remote hosting (GitHub / GitLab / Bitbucket). Tokens never cross IPC. ---
@@ -506,6 +511,14 @@ export interface IpcApi {
   [IpcChannels.EngineInfo]: {
     request: void
     response: EngineResult<EngineInfo>
+  }
+  [IpcChannels.AppVersion]: {
+    request: void
+    response: EngineResult<string>
+  }
+  [IpcChannels.AppCheckUpdates]: {
+    request: void
+    response: EngineResult<UpdateInfo>
   }
   [IpcChannels.PickDirectory]: {
     request: void

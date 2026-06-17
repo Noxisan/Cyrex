@@ -24,6 +24,7 @@ import {
   useRepoStore
 } from '../store/repoStore'
 import type { DateFormat, DiffMode, ThemeMode, ViewMode } from '../store/repoStore'
+import type { UpdateInfo } from '@shared/types'
 import { useShortcutsStore } from '../store/shortcutsStore'
 import { TEMPLATES, CUSTOM_ID, CUSTOM_FIELDS } from '../lib/templates'
 import { SHORTCUT_COMMANDS, comboFromEvent, comboKeys } from '../lib/shortcuts'
@@ -128,6 +129,11 @@ export function SettingsDialog(): React.JSX.Element | null {
   const setRestoreLastRepo = useRepoStore((s) => s.setRestoreLastRepo)
   const dateFormat = useRepoStore((s) => s.dateFormat)
   const setDateFormat = useRepoStore((s) => s.setDateFormat)
+  const checkUpdatesOnStartup = useRepoStore((s) => s.checkUpdatesOnStartup)
+  const setCheckUpdatesOnStartup = useRepoStore((s) => s.setCheckUpdatesOnStartup)
+  const [appVersion, setAppVersion] = useState('')
+  const [update, setUpdate] = useState<UpdateInfo | null>(null)
+  const [checking, setChecking] = useState(false)
   const bindings = useShortcutsStore((s) => s.bindings)
   const setBinding = useShortcutsStore((s) => s.setBinding)
   const resetBinding = useShortcutsStore((s) => s.resetBinding)
@@ -144,6 +150,25 @@ export function SettingsDialog(): React.JSX.Element | null {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [closeSettings])
+
+  // Load the running version whenever Settings opens.
+  useEffect(() => {
+    if (!open) return
+    void window.cyrex.app.version().then((r) => {
+      if (r.ok) setAppVersion(r.data)
+    })
+  }, [open])
+
+  async function checkUpdates(): Promise<void> {
+    setChecking(true)
+    const r = await window.cyrex.app.checkForUpdates()
+    setChecking(false)
+    setUpdate(
+      r.ok
+        ? r.data
+        : { current: appVersion, latest: null, updateAvailable: false, url: null, error: r.error }
+    )
+  }
 
   // Record a new combo for a command. Captures in the capture phase so it
   // pre-empts the global dispatcher; Escape cancels without closing Settings.
@@ -284,6 +309,55 @@ export function SettingsDialog(): React.JSX.Element | null {
                   options={[
                     { value: 'relative', label: t('settings.dateRelative') },
                     { value: 'absolute', label: t('settings.dateAbsolute') }
+                  ]}
+                />
+              </Row>
+
+              <div className="mt-2 border-t border-border" />
+              <p className="mb-1 mt-3 text-[11px] font-medium uppercase tracking-wide text-fg-subtle">
+                {t('settings.updates')}
+              </p>
+              <Row label={t('settings.currentVersion')}>
+                <span className="font-mono text-xs text-fg">{appVersion || '—'}</span>
+                <button
+                  type="button"
+                  onClick={() => void checkUpdates()}
+                  disabled={checking}
+                  className="rounded-[var(--radius-card)] border border-border px-2.5 py-1 text-xs text-fg-muted hover:bg-surface-2 hover:text-fg disabled:opacity-40"
+                >
+                  {checking ? t('settings.checking') : t('settings.checkUpdates')}
+                </button>
+              </Row>
+              {update && !checking && (
+                <p className="mb-1 text-[11px] leading-snug">
+                  {update.error ? (
+                    <span className="text-danger">{t('settings.checkFailed')}</span>
+                  ) : update.updateAvailable && update.latest ? (
+                    <span className="text-fg-muted">
+                      {t('settings.updateAvailable', { version: update.latest })}{' '}
+                      {update.url && (
+                        <a
+                          href={update.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-accent hover:underline"
+                        >
+                          {t('settings.viewRelease')}
+                        </a>
+                      )}
+                    </span>
+                  ) : (
+                    <span className="text-diff-add">{t('settings.upToDate')}</span>
+                  )}
+                </p>
+              )}
+              <Row label={t('settings.checkOnStartup')} desc={t('settings.checkOnStartupDesc')}>
+                <Segmented<'on' | 'off'>
+                  value={checkUpdatesOnStartup ? 'on' : 'off'}
+                  onChange={(v) => setCheckUpdatesOnStartup(v === 'on')}
+                  options={[
+                    { value: 'off', label: t('settings.off') },
+                    { value: 'on', label: t('settings.on') }
                   ]}
                 />
               </Row>

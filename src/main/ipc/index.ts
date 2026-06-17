@@ -13,6 +13,7 @@ import { GitChannels, IpcChannels } from '@shared/ipc'
 import type { EngineResult, GitProgress, RepoRef } from '@shared/types'
 import * as engine from '../git/engine'
 import * as hosting from '../hosting/service'
+import * as updates from '../updates'
 import { imageVersions } from '../images'
 import { scrubSecrets } from '../git/cli'
 import {
@@ -100,6 +101,16 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(
     IpcChannels.EngineInfo,
     wrap(null, () => engine.getEngineInfo())
+  )
+
+  ipcMain.handle(
+    IpcChannels.AppVersion,
+    wrap(null, async () => updates.getAppVersion())
+  )
+
+  ipcMain.handle(
+    IpcChannels.AppCheckUpdates,
+    wrap(null, () => updates.checkForUpdates())
   )
 
   ipcMain.handle(
