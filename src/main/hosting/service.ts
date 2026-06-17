@@ -8,18 +8,22 @@
 import { randomUUID } from 'node:crypto'
 import { shell } from 'electron'
 import type {
+  CreatePullRequestInput,
   CreateRepoInput,
   DeviceLoginStart,
   DeviceLoginStatus,
   GitProgress,
   HostingAccount,
   HostingProviderId,
+  PullRequest,
+  PullRequestList,
   RemoteRepo,
   RepoRef
 } from '@shared/types'
 import * as credentials from '../credentials'
 import * as engine from '../git/engine'
 import { gitAuth as bitbucketGitAuth } from './bitbucket'
+import type { RepoCoords } from './types'
 import { availableProviders, getProvider } from './index'
 
 interface LoginSession {
@@ -188,6 +192,81 @@ export async function authForRepo(repoPath: string): Promise<engine.CloneAuth | 
   if (!account) return undefined
   const secret = credentials.getToken(account.id)
   return secret ? cloneAuth(account.id, secret) : undefined
+}
+
+/**
+ * Parse owner/name/full-path and host from a remote URL, handling both HTTPS
+ * (`https://host/owner/repo.git`) and SSH (`git@host:owner/repo.git`,
+ * `ssh://git@host/owner/repo.git`) forms. Returns null if it isn't a usable
+ * `owner/…/repo` URL.
+ */
+function parseRemote(url: string): { host: string; coords: RepoCoords } | null {
+  let host: string
+  let path: string
+  const scp = /^[^/@]+@([^:]+):(.+)$/.exec(url) // git@host:owner/repo.git
+  if (scp) {
+    host = scp[1]
+    path = scp[2]
+  } else {
+    try {
+      const u = new URL(url)
+      host = u.hostname
+      path = u.pathname
+    } catch {
+      return null
+    }
+  }
+  const clean = path
+    .replace(/^\/+/, '')
+    // Trim trailing slashes before stripping `.git` so a trailing-slash URL
+    // (".../repo.git/") doesn't leave ".git" stuck on the repo name.
+    .replace(/\/+$/, '')
+    .replace(/\.git$/, '')
+  if (!clean.includes('/')) return null
+  const segs = clean.split('/')
+  return { host, coords: { owner: segs[0], name: segs[segs.length - 1], fullPath: clean } }
+}
+
+type ResolvedRepo =
+  | { ok: true; provider: HostingProviderId; accountId: string; coords: RepoCoords }
+  | { ok: false; list: PullRequestList }
+
+/** Map a repo's remote to its provider, coordinates, and a connected account. */
+async function resolveHostedRepo(repoPath: string): Promise<ResolvedRepo> {
+  const url = await engine.remoteUrl(repoPath)
+  if (!url) return { ok: false, list: { status: 'unsupported', reason: 'no-remote' } }
+  const parsed = parseRemote(url)
+  const provider = parsed ? HOST_PROVIDER[parsed.host] : undefined
+  if (!parsed || !provider) {
+    return { ok: false, list: { status: 'unsupported', reason: 'unknown-host' } }
+  }
+  const account = credentials.listAccounts().find((a) => a.provider === provider)
+  if (!account) return { ok: false, list: { status: 'noAccount', provider } }
+  return { ok: true, provider, accountId: account.id, coords: parsed.coords }
+}
+
+/** Open pull/merge requests for the repo, or a benign reason it can't list them. */
+export async function listPullRequests(repoPath: string): Promise<PullRequestList> {
+  const r = await resolveHostedRepo(repoPath)
+  if (!r.ok) return r.list
+  const items = await getProvider(r.provider).listPullRequests(tokenFor(r.accountId), r.coords)
+  return { status: 'ok', provider: r.provider, repo: r.coords.fullPath, items }
+}
+
+/** Create a pull/merge request from the repo's connected account. */
+export async function createPullRequest(
+  repoPath: string,
+  input: CreatePullRequestInput
+): Promise<PullRequest> {
+  const r = await resolveHostedRepo(repoPath)
+  if (!r.ok) {
+    throw new Error(
+      r.list.status === 'noAccount'
+        ? 'Connect the matching hosting account before opening a pull request.'
+        : "This repository's remote is not a supported hosting provider."
+    )
+  }
+  return getProvider(r.provider).createPullRequest(tokenFor(r.accountId), r.coords, input)
 }
 
 /** Clone a repo, resolving the account's token in-process (never via IPC). */

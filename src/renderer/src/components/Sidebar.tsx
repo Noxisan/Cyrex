@@ -117,6 +117,20 @@ function Section({
   )
 }
 
+/**
+ * A non-interactive caption that introduces a logical group of sections and
+ * doubles as the separator between groups. Deliberately quieter than a Section
+ * header (no chevron/icon, smaller, more muted) so the hierarchy reads as
+ * group → section → row.
+ */
+function GroupHeader({ label }: { label: string }): React.JSX.Element {
+  return (
+    <div className="select-none border-t border-border px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-subtle">
+      {label}
+    </div>
+  )
+}
+
 function NameInput({
   initial,
   placeholder,
@@ -574,6 +588,8 @@ export function Sidebar(): React.JSX.Element {
         )}
       </Section>
 
+      <GroupHeader label={t('sidebar.groupRefs')} />
+
       <Section
         title={t('sidebar.localBranches')}
         icon={GitBranch}
@@ -704,6 +720,8 @@ export function Sidebar(): React.JSX.Element {
           ))
         )}
       </Section>
+
+      <GroupHeader label={t('sidebar.groupWorkspace')} />
 
       <Section
         title={t('sidebar.stashes')}

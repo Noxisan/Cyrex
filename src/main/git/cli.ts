@@ -27,8 +27,9 @@ export function scrubSecrets(text: string): string {
   return text
     // https://user:token@host -> https://user:***@host
     .replace(/(https?:\/\/[^:/\s]+:)[^@\s]+@/gi, '$1***@')
-    // Authorization headers, bearer tokens, common token shapes
-    .replace(/(authorization:\s*\S+)/gi, 'authorization: ***')
+    // Authorization headers: mask the entire value (scheme + token), not just the
+    // scheme — `Authorization: Bearer <jwt>` must not leak the <jwt> after "Bearer".
+    .replace(/authorization:\s*[^\r\n]+/gi, 'authorization: ***')
     .replace(/(gh[pousr]_[A-Za-z0-9]{20,})/g, '***')
 }
 

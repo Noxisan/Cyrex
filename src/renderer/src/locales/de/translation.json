@@ -12,9 +12,32 @@
     "search": "Suchen",
     "undo": "Rückgängig",
     "terminal": "Terminal",
+    "pullRequests": "Pull Requests",
     "settings": "Einstellungen",
     "merge": "Merge",
     "rebase": "Rebase"
+  },
+  "pr": {
+    "title": "Pull Requests",
+    "new": "Neu",
+    "createTitle": "Neuer Pull Request",
+    "source": "Von",
+    "target": "Nach",
+    "titleField": "Titel",
+    "titlePlaceholder": "Die Änderung kurz zusammenfassen",
+    "description": "Beschreibung",
+    "descriptionPlaceholder": "Beschreibe, was sich ändert und warum (optional)",
+    "draft": "Als Entwurf erstellen",
+    "draftBadge": "Entwurf",
+    "sameBranch": "Quell- und Ziel-Branch müssen sich unterscheiden.",
+    "create": "Pull Request erstellen",
+    "creating": "Wird erstellt…",
+    "loading": "Pull Requests werden geladen…",
+    "empty": "Keine offenen Pull Requests.",
+    "openInBrowser": "Im Browser öffnen",
+    "unsupported": "Das Remote dieses Repositories gehört zu keinem unterstützten Hosting-Anbieter (GitHub, GitLab oder Bitbucket).",
+    "noAccount": "Verbinde ein {{provider}}-Konto, um Pull Requests anzuzeigen und zu erstellen.",
+    "connectAccount": "Konto verbinden"
   },
   "dnd": {
     "merge": "{{source}} in {{target}} mergen",
@@ -104,6 +127,8 @@
   },
   "sidebar": {
     "repositories": "Repositories",
+    "groupRefs": "Branches & Tags",
+    "groupWorkspace": "Arbeitsbereich",
     "localBranches": "Lokale Branches",
     "remoteBranches": "Remote-Branches",
     "tags": "Tags",
@@ -135,7 +160,8 @@
   "common": {
     "cancel": "Abbrechen",
     "create": "Erstellen",
-    "add": "Hinzufügen"
+    "add": "Hinzufügen",
+    "refresh": "Aktualisieren"
   },
   "identity": {
     "title": "Git-Identität",
@@ -354,7 +380,8 @@
   "graph": {
     "title": "Commit-Graph",
     "empty": "Keine Commits vorhanden.",
-    "loading": "Historie wird geladen…"
+    "loading": "Historie wird geladen…",
+    "loadingMore": "Weitere werden geladen…"
   },
   "search": {
     "placeholder": "Commits suchen…",

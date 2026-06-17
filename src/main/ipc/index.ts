@@ -21,8 +21,10 @@ import {
   cloneSchema,
   hostingClearOAuthAppSchema,
   hostingConnectTokenSchema,
+  hostingCreatePullRequestSchema,
   hostingCreateRepoSchema,
   hostingDisconnectSchema,
+  hostingListPullRequestsSchema,
   hostingListReposSchema,
   hostingPollLoginSchema,
   hostingSetOAuthAppSchema,
@@ -678,6 +680,24 @@ export function registerIpcHandlers(): void {
         name: req.name,
         description: req.description,
         private: req.private
+      })
+    )
+  )
+
+  ipcMain.handle(
+    IpcChannels.HostingListPullRequests,
+    wrap(hostingListPullRequestsSchema, (req) => hosting.listPullRequests(req.path))
+  )
+
+  ipcMain.handle(
+    IpcChannels.HostingCreatePullRequest,
+    wrap(hostingCreatePullRequestSchema, (req) =>
+      hosting.createPullRequest(req.path, {
+        title: req.title,
+        body: req.body,
+        sourceBranch: req.sourceBranch,
+        targetBranch: req.targetBranch,
+        draft: req.draft
       })
     )
   )

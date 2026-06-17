@@ -4,8 +4,14 @@
  * as __GITHUB_CLIENT_ID__); there is no client secret to ship.
  */
 
-import type { CreateRepoInput, HostingAccount, RemoteRepo } from '@shared/types'
-import type { DeviceCode, DevicePoll, HostingProvider } from './types'
+import type {
+  CreatePullRequestInput,
+  CreateRepoInput,
+  HostingAccount,
+  PullRequest,
+  RemoteRepo
+} from '@shared/types'
+import type { DeviceCode, DevicePoll, HostingProvider, RepoCoords } from './types'
 
 const API = 'https://api.github.com'
 const DEVICE_CODE_URL = 'https://github.com/login/device/code'
@@ -71,6 +77,11 @@ export const github: HostingProvider = {
 
   supportsDeviceFlow() {
     return clientId().length > 0
+  },
+
+  // GitHub login uses a build-time public client id, not an in-app entry.
+  oauthConfigurable() {
+    return false
   },
 
   async startDeviceLogin(): Promise<DeviceCode> {
@@ -162,5 +173,62 @@ export const github: HostingProvider = {
       })
     })
     return toRemoteRepo(r)
+  },
+
+  async listPullRequests(token: string, repo: RepoCoords): Promise<PullRequest[]> {
+    const prs = await api<GhPull[]>(
+      token,
+      `/repos/${repo.owner}/${repo.name}/pulls?state=open&per_page=50&sort=updated&direction=desc`
+    )
+    return prs.map(toPullRequest)
+  },
+
+  async createPullRequest(
+    token: string,
+    repo: RepoCoords,
+    input: CreatePullRequestInput
+  ): Promise<PullRequest> {
+    const pr = await api<GhPull>(token, `/repos/${repo.owner}/${repo.name}/pulls`, {
+      method: 'POST',
+      body: JSON.stringify({
+        title: input.title,
+        body: input.body ?? '',
+        head: input.sourceBranch,
+        base: input.targetBranch,
+        draft: input.draft ?? false
+      })
+    })
+    return toPullRequest(pr)
+  }
+}
+
+interface GhPull {
+  id: number
+  number: number
+  title: string
+  state: 'open' | 'closed'
+  draft: boolean
+  merged_at: string | null
+  html_url: string
+  created_at: string | null
+  updated_at: string | null
+  user: { login: string } | null
+  head: { ref: string }
+  base: { ref: string }
+}
+
+function toPullRequest(p: GhPull): PullRequest {
+  return {
+    id: String(p.id),
+    number: p.number,
+    title: p.title,
+    state: p.merged_at ? 'merged' : p.state === 'closed' ? 'closed' : 'open',
+    author: p.user?.login ?? null,
+    sourceBranch: p.head.ref,
+    targetBranch: p.base.ref,
+    isDraft: p.draft,
+    htmlUrl: p.html_url,
+    createdAt: p.created_at,
+    updatedAt: p.updated_at
   }
 }

@@ -286,6 +286,15 @@ export const hostingCreateRepoSchema = z.object({
   description: z.string().max(2000).optional(),
   private: z.boolean()
 })
+export const hostingListPullRequestsSchema = z.object({ path: z.string().min(1) })
+export const hostingCreatePullRequestSchema = z.object({
+  path: z.string().min(1),
+  title: z.string().min(1).max(256),
+  body: z.string().max(60000).optional(),
+  sourceBranch: refName,
+  targetBranch: refName,
+  draft: z.boolean().optional()
+})
 
 // A folder name for a clone target: no separators or traversal.
 const folderName = z

@@ -89,6 +89,10 @@ interface RepoState {
   settingsOpen: boolean
   /** The visual .gitignore editor dialog. */
   gitignoreOpen: boolean
+  /** The Pull Requests panel (hosting integration). */
+  prPanelOpen: boolean
+  /** The Create Pull Request dialog. */
+  createPROpen: boolean
   /** Resolved theme currently applied to the document. */
   theme: Theme
   /** The user's theme preference (system follows the OS). */
@@ -131,6 +135,10 @@ interface RepoState {
   closeSettings: () => void
   openGitignore: () => void
   closeGitignore: () => void
+  openPRPanel: () => void
+  closePRPanel: () => void
+  openCreatePR: () => void
+  closeCreatePR: () => void
   setThemeMode: (mode: ThemeMode) => void
   toggleTheme: () => void
   setAccent: (id: string) => void
@@ -274,6 +282,8 @@ export const useRepoStore = create<RepoState>((set, get) => ({
   createTagTarget: null,
   settingsOpen: false,
   gitignoreOpen: false,
+  prPanelOpen: false,
+  createPROpen: false,
   theme: resolvedTheme(initialTemplate(), initialThemeMode()),
   themeMode: initialThemeMode(),
   accent: initialAccent().id,
@@ -332,7 +342,9 @@ export const useRepoStore = create<RepoState>((set, get) => ({
       inspectorFile: null,
       searchQuery: '',
       reflogOpen: false,
-      rebaseBase: null
+      rebaseBase: null,
+      prPanelOpen: false,
+      createPROpen: false
     })),
   selectCommit: (sha) => set({ selectedSha: sha }),
   setViewMode: (mode) => set({ viewMode: mode }),
@@ -357,6 +369,10 @@ export const useRepoStore = create<RepoState>((set, get) => ({
   closeSettings: () => set({ settingsOpen: false }),
   openGitignore: () => set({ gitignoreOpen: true }),
   closeGitignore: () => set({ gitignoreOpen: false }),
+  openPRPanel: () => set({ prPanelOpen: true }),
+  closePRPanel: () => set({ prPanelOpen: false }),
+  openCreatePR: () => set({ createPROpen: true }),
+  closeCreatePR: () => set({ createPROpen: false }),
 
   setThemeMode: (mode) => {
     localStorage.setItem(THEME_MODE_KEY, mode)

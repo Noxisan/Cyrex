@@ -12,9 +12,32 @@
     "search": "Search",
     "undo": "Undo",
     "terminal": "Terminal",
+    "pullRequests": "Pull Requests",
     "settings": "Settings",
     "merge": "Merge",
     "rebase": "Rebase"
+  },
+  "pr": {
+    "title": "Pull Requests",
+    "new": "New",
+    "createTitle": "New pull request",
+    "source": "From",
+    "target": "Into",
+    "titleField": "Title",
+    "titlePlaceholder": "Summarize the change",
+    "description": "Description",
+    "descriptionPlaceholder": "Describe what this changes and why (optional)",
+    "draft": "Create as draft",
+    "draftBadge": "Draft",
+    "sameBranch": "Source and target branches must differ.",
+    "create": "Create pull request",
+    "creating": "Creating…",
+    "loading": "Loading pull requests…",
+    "empty": "No open pull requests.",
+    "openInBrowser": "Open in browser",
+    "unsupported": "This repository's remote is not a supported hosting provider (GitHub, GitLab, or Bitbucket).",
+    "noAccount": "Connect a {{provider}} account to view and create pull requests.",
+    "connectAccount": "Connect account"
   },
   "dnd": {
     "merge": "Merge {{source}} into {{target}}",
@@ -104,6 +127,8 @@
   },
   "sidebar": {
     "repositories": "Repositories",
+    "groupRefs": "Branches & Tags",
+    "groupWorkspace": "Workspace",
     "localBranches": "Local Branches",
     "remoteBranches": "Remote Branches",
     "tags": "Tags",
@@ -135,7 +160,8 @@
   "common": {
     "cancel": "Cancel",
     "create": "Create",
-    "add": "Add"
+    "add": "Add",
+    "refresh": "Refresh"
   },
   "identity": {
     "title": "Git identity",
@@ -354,7 +380,8 @@
   "graph": {
     "title": "Commit Graph",
     "empty": "No commits to display.",
-    "loading": "Loading history…"
+    "loading": "Loading history…",
+    "loadingMore": "Loading more…"
   },
   "search": {
     "placeholder": "Search commits…",

@@ -25,6 +25,8 @@ import { CreateRepoDialog } from './components/CreateRepoDialog'
 import { CreateTagDialog } from './components/CreateTagDialog'
 import { SettingsDialog } from './components/SettingsDialog'
 import { GitignoreDialog } from './components/GitignoreDialog'
+import { PullRequestsPanel } from './components/PullRequestsPanel'
+import { CreatePRDialog } from './components/CreatePRDialog'
 
 // Width bounds for the resizable commit-detail panel (history view).
 const MIN_DETAIL = 300
@@ -102,6 +104,8 @@ export function App(): React.JSX.Element {
       <CreateTagDialog />
       <SettingsDialog />
       <GitignoreDialog />
+      <PullRequestsPanel />
+      <CreatePRDialog />
       <Toasts />
     </div>
   )
