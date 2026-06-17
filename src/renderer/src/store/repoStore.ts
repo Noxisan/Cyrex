@@ -106,6 +106,8 @@ interface RepoState {
   customDark: boolean
   /** Which view a repository opens into. */
   defaultView: ViewMode
+  /** Renderer zoom factor (interface / text scale), 1 = 100%. */
+  fontScale: number
 
   addRepo: (repo: RepoRef) => void
   removeRepo: (path: string) => void
@@ -146,6 +148,7 @@ interface RepoState {
   setCustomColor: (name: string, value: string) => void
   setCustomDark: (dark: boolean) => void
   setDefaultView: (view: ViewMode) => void
+  setFontScale: (scale: number) => void
 }
 
 const REPOS_KEY = 'cyrex.repos'
@@ -155,6 +158,11 @@ const ACCENT_KEY = 'cyrex.accent'
 const TEMPLATE_KEY = 'cyrex.template'
 const CUSTOM_KEY = 'cyrex.customTemplate'
 const DEFAULT_VIEW_KEY = 'cyrex.defaultView'
+const FONT_SCALE_KEY = 'cyrex.fontScale'
+
+/** Interface zoom bounds (1 = 100%); steps of 0.1 in the Settings control. */
+export const MIN_FONT_SCALE = 0.8
+export const MAX_FONT_SCALE = 1.6
 
 function initialTemplate(): string {
   const id = localStorage.getItem(TEMPLATE_KEY)
@@ -200,6 +208,19 @@ function initialAccent(): AccentPalette {
 
 function initialDefaultView(): ViewMode {
   return localStorage.getItem(DEFAULT_VIEW_KEY) === 'changes' ? 'changes' : 'history'
+}
+
+const clampScale = (n: number): number =>
+  Math.min(MAX_FONT_SCALE, Math.max(MIN_FONT_SCALE, Math.round(n * 100) / 100))
+
+function initialFontScale(): number {
+  const n = Number(localStorage.getItem(FONT_SCALE_KEY))
+  return Number.isFinite(n) && n > 0 ? clampScale(n) : 1
+}
+
+/** Apply the interface zoom factor to the renderer (scales the whole UI). */
+export function applyFontScale(scale: number): void {
+  window.cyrex.windowControls.setZoom(scale)
 }
 
 export function applyTheme(theme: Theme): void {
@@ -291,6 +312,7 @@ export const useRepoStore = create<RepoState>((set, get) => ({
   customColors: loadCustom().vars,
   customDark: loadCustom().dark,
   defaultView: initialDefaultView(),
+  fontScale: initialFontScale(),
 
   addRepo: (repo) =>
     set((s) => {
@@ -418,6 +440,13 @@ export const useRepoStore = create<RepoState>((set, get) => ({
   setDefaultView: (view) => {
     localStorage.setItem(DEFAULT_VIEW_KEY, view)
     set({ defaultView: view })
+  },
+
+  setFontScale: (scale) => {
+    const clamped = clampScale(scale)
+    localStorage.setItem(FONT_SCALE_KEY, String(clamped))
+    applyFontScale(clamped)
+    set({ fontScale: clamped })
   }
 }))
 

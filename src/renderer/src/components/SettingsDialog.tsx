@@ -3,16 +3,18 @@ import { useTranslation } from 'react-i18next'
 import {
   Check,
   Keyboard,
+  Minus,
   Monitor,
   Moon,
   Palette,
+  Plus,
   RotateCcw,
   SlidersHorizontal,
   Sun,
   UserRound,
   X
 } from 'lucide-react'
-import { ACCENTS, useRepoStore } from '../store/repoStore'
+import { ACCENTS, MAX_FONT_SCALE, MIN_FONT_SCALE, useRepoStore } from '../store/repoStore'
 import type { ThemeMode, ViewMode } from '../store/repoStore'
 import { useShortcutsStore } from '../store/shortcutsStore'
 import { TEMPLATES, CUSTOM_ID, CUSTOM_FIELDS } from '../lib/templates'
@@ -90,6 +92,8 @@ export function SettingsDialog(): React.JSX.Element | null {
   const setCustomDark = useRepoStore((s) => s.setCustomDark)
   const defaultView = useRepoStore((s) => s.defaultView)
   const setDefaultView = useRepoStore((s) => s.setDefaultView)
+  const fontScale = useRepoStore((s) => s.fontScale)
+  const setFontScale = useRepoStore((s) => s.setFontScale)
   const bindings = useShortcutsStore((s) => s.bindings)
   const setBinding = useShortcutsStore((s) => s.setBinding)
   const resetBinding = useShortcutsStore((s) => s.resetBinding)
@@ -304,6 +308,41 @@ export function SettingsDialog(): React.JSX.Element | null {
                     { value: 'system', label: t('settings.themeSystem'), icon: Monitor }
                   ]}
                 />
+              </Row>
+              <div className="border-t border-border" />
+              <Row label={t('settings.zoom')}>
+                <button
+                  type="button"
+                  onClick={() => setFontScale(fontScale - 0.1)}
+                  disabled={fontScale <= MIN_FONT_SCALE}
+                  aria-label={t('settings.zoomOut')}
+                  className="rounded-[var(--radius-card)] border border-border p-1 text-fg-muted hover:bg-surface-2 hover:text-fg disabled:opacity-40"
+                >
+                  <Minus size={13} strokeWidth={2} />
+                </button>
+                <span className="w-12 text-center text-xs tabular-nums text-fg">
+                  {Math.round(fontScale * 100)}%
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setFontScale(fontScale + 0.1)}
+                  disabled={fontScale >= MAX_FONT_SCALE}
+                  aria-label={t('settings.zoomIn')}
+                  className="rounded-[var(--radius-card)] border border-border p-1 text-fg-muted hover:bg-surface-2 hover:text-fg disabled:opacity-40"
+                >
+                  <Plus size={13} strokeWidth={2} />
+                </button>
+                {fontScale !== 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setFontScale(1)}
+                    title={t('settings.zoomReset')}
+                    aria-label={t('settings.zoomReset')}
+                    className="rounded-[var(--radius-card)] p-1 text-fg-subtle hover:bg-surface-2 hover:text-fg"
+                  >
+                    <RotateCcw size={13} strokeWidth={1.75} />
+                  </button>
+                )}
               </Row>
               <div className="border-t border-border" />
               <div className="py-3">

@@ -4,7 +4,7 @@
  * Secrets never transit this layer — only repo metadata defined in @shared.
  */
 
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webFrame } from 'electron'
 import { GitChannels, IpcChannels, TerminalChannels, WindowChannels } from '@shared/ipc'
 import type { IpcApi } from '@shared/ipc'
 import type {
@@ -192,6 +192,8 @@ export const cyrexApi = {
     minimize: (): Promise<void> => ipcRenderer.invoke(WindowChannels.Minimize),
     maximizeToggle: (): Promise<boolean> => ipcRenderer.invoke(WindowChannels.MaximizeToggle),
     close: (): Promise<void> => ipcRenderer.invoke(WindowChannels.Close),
+    /** Scale the whole renderer (interface zoom / text size). Renderer-local. */
+    setZoom: (factor: number): void => webFrame.setZoomFactor(factor),
     isMaximized: (): Promise<boolean> => ipcRenderer.invoke(WindowChannels.IsMaximized),
     onMaximizeChange: (cb: (isMax: boolean) => void): (() => void) => {
       const listener = (_e: unknown, isMax: boolean): void => cb(isMax)
