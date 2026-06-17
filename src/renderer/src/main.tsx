@@ -4,12 +4,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './i18n'
 import './styles/index.css'
 import { App } from './App'
-import { applyAppearance, useRepoStore } from './store/repoStore'
+import { applyAppearance, applyFontScale, useRepoStore } from './store/repoStore'
 
-// Apply the persisted template (or theme + accent) before first paint.
+// Apply the persisted template (theme + accent) and interface zoom before first paint.
 {
   const s = useRepoStore.getState()
   applyAppearance(s.template, s.themeMode, s.accent)
+  applyFontScale(s.fontScale)
 }
 
 const queryClient = new QueryClient({
