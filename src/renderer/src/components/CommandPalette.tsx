@@ -5,9 +5,11 @@ import {
   ArrowUpFromLine,
   Archive,
   Cloud,
+  FileCog,
   FolderOpen,
   GitBranch,
   GitCommitHorizontal,
+  GitPullRequest,
   Hash,
   History,
   Moon,
@@ -64,7 +66,9 @@ export function CommandPalette(): React.JSX.Element | null {
   const toggleTerminal = useRepoStore((s) => s.toggleTerminal)
   const toggleTheme = useRepoStore((s) => s.toggleTheme)
   const openSettings = useRepoStore((s) => s.openSettings)
-  const addRepo = useRepoStore((s) => s.addRepo)
+  const openRepoModal = useRepoStore((s) => s.openRepoModal)
+  const openPRPanel = useRepoStore((s) => s.openPRPanel)
+  const openGitignore = useRepoStore((s) => s.openGitignore)
 
   const { data: branches } = useBranches(activePath)
   const checkout = useCheckout(activePath ?? '')
@@ -143,10 +147,6 @@ export function CommandPalette(): React.JSX.Element | null {
     const view = t('palette.group.view')
     const branchGroup = t('palette.group.branches')
 
-    const openRepository = async (): Promise<void> => {
-      const res = await window.cyrex.openRepoDialog()
-      if (res.ok && res.data) addRepo(res.data)
-    }
     // Built group-contiguous (the renderer prints a header on each group change).
     const list: Command[] = []
     if (hasRepo) {
@@ -155,12 +155,14 @@ export function CommandPalette(): React.JSX.Element | null {
         { id: 'nav-changes', group: nav, label: t('palette.goChanges'), icon: GitCommitHorizontal, keywords: 'staging commit', hint: 'g c', run: () => setViewMode('changes') }
       )
     }
+    // Opens the unified Open/Clone/Create wizard (same as Ctrl/Cmd+O).
     list.push({
       id: 'open-repo',
       group: repo,
       label: t('actions.openRepository'),
       icon: FolderOpen,
-      run: () => void openRepository()
+      keywords: 'clone create new local',
+      run: openRepoModal
     })
     if (hasRepo) {
       list.push(
@@ -168,6 +170,8 @@ export function CommandPalette(): React.JSX.Element | null {
         { id: 'pull', group: repo, label: t('actions.pull'), icon: ArrowDownToLine, run: () => pull.mutate(undefined) },
         { id: 'push', group: repo, label: t('actions.push'), icon: ArrowUpFromLine, run: () => push.mutate(false) },
         { id: 'stash', group: repo, label: t('palette.stashQuick'), icon: Archive, keywords: 'wip save', run: () => stashSave.mutate(undefined) },
+        { id: 'pull-requests', group: repo, label: t('actions.pullRequests'), icon: GitPullRequest, keywords: 'pr mr merge request', run: openPRPanel },
+        { id: 'edit-ignore', group: repo, label: t('ignore.edit'), icon: FileCog, keywords: 'gitignore exclude', run: openGitignore },
         { id: 'undo', group: repo, label: t('palette.openUndo'), icon: Undo2, keywords: 'reflog recover history', run: openReflog }
       )
     }

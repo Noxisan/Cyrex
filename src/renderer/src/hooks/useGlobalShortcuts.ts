@@ -40,6 +40,9 @@ function runCommand(id: string): void {
     case 'undo':
       s.openReflog()
       break
+    case 'pullRequests':
+      s.openPRPanel()
+      break
   }
 }
 
