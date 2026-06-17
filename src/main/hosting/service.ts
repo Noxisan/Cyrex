@@ -218,8 +218,10 @@ function parseRemote(url: string): { host: string; coords: RepoCoords } | null {
   }
   const clean = path
     .replace(/^\/+/, '')
-    .replace(/\.git$/, '')
+    // Trim trailing slashes before stripping `.git` so a trailing-slash URL
+    // (".../repo.git/") doesn't leave ".git" stuck on the repo name.
     .replace(/\/+$/, '')
+    .replace(/\.git$/, '')
   if (!clean.includes('/')) return null
   const segs = clean.split('/')
   return { host, coords: { owner: segs[0], name: segs[segs.length - 1], fullPath: clean } }
