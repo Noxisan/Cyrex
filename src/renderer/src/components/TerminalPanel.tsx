@@ -90,6 +90,10 @@ export function TerminalPanel(): React.JSX.Element | null {
     })
 
     const submit = (): void => {
+      // The shell session is created asynchronously; ignore Enter until its id
+      // arrives so a command can't be sent to an empty id (which would reject in
+      // the main process and leave the terminal stuck "running").
+      if (!st.id) return
       const line = st.buf
       st.buf = ''
       term.write('\r\n')
