@@ -126,6 +126,8 @@ interface RepoState {
   restoreLastRepo: boolean
   /** Commit timestamp style in the graph. */
   dateFormat: DateFormat
+  /** Check the GitHub releases for a newer version when the app starts. */
+  checkUpdatesOnStartup: boolean
 
   addRepo: (repo: RepoRef) => void
   removeRepo: (path: string) => void
@@ -174,6 +176,7 @@ interface RepoState {
   setAutoFetchMinutes: (minutes: number) => void
   setRestoreLastRepo: (restore: boolean) => void
   setDateFormat: (format: DateFormat) => void
+  setCheckUpdatesOnStartup: (check: boolean) => void
 }
 
 const REPOS_KEY = 'cyrex.repos'
@@ -191,6 +194,7 @@ const AUTO_FETCH_KEY = 'cyrex.autoFetchMinutes'
 const RESTORE_KEY = 'cyrex.restoreLastRepo'
 const LAST_REPO_KEY = 'cyrex.lastRepo'
 const DATE_FORMAT_KEY = 'cyrex.dateFormat'
+const UPDATE_CHECK_KEY = 'cyrex.checkUpdatesOnStartup'
 
 /** Auto-fetch interval choices (minutes); 0 = off. */
 export const AUTO_FETCH_OPTIONS = [0, 5, 10, 15]
@@ -280,6 +284,10 @@ function initialRestore(): boolean {
 }
 function initialDateFormat(): DateFormat {
   return localStorage.getItem(DATE_FORMAT_KEY) === 'absolute' ? 'absolute' : 'relative'
+}
+// On by default — unset is treated as enabled.
+function initialCheckUpdates(): boolean {
+  return localStorage.getItem(UPDATE_CHECK_KEY) !== '0'
 }
 /** The repo to reopen on launch, when enabled and still in the known list. */
 function initialActivePath(): string | null {
@@ -385,6 +393,7 @@ export const useRepoStore = create<RepoState>((set, get) => ({
   autoFetchMinutes: initialAutoFetch(),
   restoreLastRepo: initialRestore(),
   dateFormat: initialDateFormat(),
+  checkUpdatesOnStartup: initialCheckUpdates(),
 
   addRepo: (repo) =>
     set((s) => {
@@ -553,6 +562,10 @@ export const useRepoStore = create<RepoState>((set, get) => ({
   setDateFormat: (format) => {
     localStorage.setItem(DATE_FORMAT_KEY, format)
     set({ dateFormat: format })
+  },
+  setCheckUpdatesOnStartup: (check) => {
+    localStorage.setItem(UPDATE_CHECK_KEY, check ? '1' : '0')
+    set({ checkUpdatesOnStartup: check })
   }
 }))
 

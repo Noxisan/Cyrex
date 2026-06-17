@@ -26,6 +26,11 @@ function invoke<C extends keyof IpcApi>(channel: C, payload?: Req<C>): Promise<R
 
 export const cyrexApi = {
   engineInfo: () => invoke(IpcChannels.EngineInfo),
+  /** App version + GitHub release update check (no repo data leaves the app). */
+  app: {
+    version: () => invoke(IpcChannels.AppVersion),
+    checkForUpdates: () => invoke(IpcChannels.AppCheckUpdates)
+  },
   identity: (path?: string) => invoke(IpcChannels.GitIdentity, { path }),
   setGlobalIdentity: (name: string, email: string) =>
     invoke(IpcChannels.GitSetGlobalIdentity, { name, email }),
