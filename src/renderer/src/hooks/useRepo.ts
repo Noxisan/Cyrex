@@ -4,7 +4,7 @@
  * thrown error so components render real error states (never faked success).
  */
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import type { DiffSource, EngineResult, LogOptions, RebaseTodoItem } from '@shared/types'
 import { useToastStore } from '../store/toastStore'
@@ -67,6 +67,27 @@ export function useLog(path: string | null, options?: LogOptions) {
     queryKey: ['log', path, options],
     enabled: !!path,
     queryFn: async () => unwrap(await window.cyrex.log(path!, options))
+  })
+}
+
+/** How many commits each history page pulls; the graph loads more on scroll. */
+export const LOG_PAGE_SIZE = 200
+
+/**
+ * Paginated history for the commit graph. Pages are fetched with the engine's
+ * `skip`/`limit` and concatenated in topological order, so the graph can stream
+ * older history on demand instead of capping at a fixed window. A page shorter
+ * than the page size means the end of history has been reached.
+ */
+export function useInfiniteLog(path: string | null, pageSize = LOG_PAGE_SIZE) {
+  return useInfiniteQuery({
+    queryKey: ['log-infinite', path, pageSize],
+    enabled: !!path,
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) =>
+      unwrap(await window.cyrex.log(path!, { limit: pageSize, skip: pageParam })),
+    getNextPageParam: (lastPage, _allPages, lastPageParam) =>
+      lastPage.length < pageSize ? undefined : lastPageParam + pageSize
   })
 }
 
@@ -228,6 +249,7 @@ function useRepoMutation<TVars, TData = unknown>(
         'status',
         'workingDiff',
         'log',
+        'log-infinite',
         'branches',
         'tags',
         'stashes',
