@@ -42,8 +42,8 @@ function contentSecurityPolicy(): string {
 
 function createWindow(): void {
   const win = new BrowserWindow({
-    width: 1280,
-    height: 820,
+    width: 1440,
+    height: 900,
     minWidth: 940,
     minHeight: 600,
     show: false,

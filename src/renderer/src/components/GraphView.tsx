@@ -11,7 +11,7 @@ import type { MenuState } from './ContextMenu'
 const ROW_H = 30
 const LANE_W = 16
 const LANE_PAD = 12
-const REFS_W = 200
+const REFS_W = 290
 const DOT_OUTER = 5
 const DOT_INNER = 3.2
 
@@ -61,7 +61,7 @@ function RefPill({ info, lane }: { info: RefInfo; lane: number }): React.JSX.Ele
   return (
     <span
       title={info.label}
-      className="flex max-w-[150px] shrink-0 items-center gap-1 rounded-[var(--radius-card)] border px-1.5 py-[1px] text-[10.5px] font-medium leading-none"
+      className="flex min-w-0 max-w-[120px] items-center gap-1 rounded-[var(--radius-card)] border px-1.5 py-[1px] text-[10.5px] font-medium leading-none"
       style={{
         color,
         borderColor: color,
