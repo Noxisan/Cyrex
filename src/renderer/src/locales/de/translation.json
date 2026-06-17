@@ -204,7 +204,13 @@
       "goHistory": "Zur Historie",
       "goChanges": "Zu Änderungen",
       "commit": "Commit (im Nachrichtenfeld)",
-      "dismiss": "Dialog schließen / Suche leeren"
+      "dismiss": "Dialog schließen / Suche leeren",
+      "editHint": "Auf ein Kürzel klicken und die neuen Tasten drücken. Escape bricht ab.",
+      "recording": "Tasten drücken…",
+      "unbound": "Nicht belegt",
+      "reset": "Auf Standard zurücksetzen",
+      "resetAll": "Alle zurücksetzen",
+      "fixed": "Fest"
     }
   },
   "repo": {

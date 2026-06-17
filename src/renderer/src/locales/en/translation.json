@@ -204,7 +204,13 @@
       "goHistory": "Go to History",
       "goChanges": "Go to Changes",
       "commit": "Commit (in message box)",
-      "dismiss": "Close dialog / clear search"
+      "dismiss": "Close dialog / clear search",
+      "editHint": "Click a shortcut and press the new keys. Escape cancels.",
+      "recording": "Press keys…",
+      "unbound": "Not set",
+      "reset": "Reset to default",
+      "resetAll": "Reset all",
+      "fixed": "Fixed"
     }
   },
   "repo": {

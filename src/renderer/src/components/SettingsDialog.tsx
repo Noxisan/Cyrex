@@ -6,23 +6,24 @@ import {
   Monitor,
   Moon,
   Palette,
+  RotateCcw,
   SlidersHorizontal,
   Sun,
   X
 } from 'lucide-react'
 import { ACCENTS, useRepoStore } from '../store/repoStore'
 import type { ThemeMode, ViewMode } from '../store/repoStore'
+import { useShortcutsStore } from '../store/shortcutsStore'
 import { TEMPLATES } from '../lib/templates'
+import { SHORTCUT_COMMANDS, comboFromEvent, comboKeys } from '../lib/shortcuts'
 import { MOD_KEY as MOD } from '../lib/platform'
 import { LANGUAGES } from '../i18n'
 
 type SectionId = 'general' | 'appearance' | 'shortcuts'
 
-/** Keyboard reference, derived from the handlers actually wired in the app. */
-function shortcuts(t: (k: string) => string): { keys: string[]; label: string }[] {
+/** Built-in, non-rebindable shortcuts shown for reference. */
+function fixedShortcuts(t: (k: string) => string): { keys: string[]; label: string }[] {
   return [
-    { keys: [`${MOD}`, 'K'], label: t('palette.open') },
-    { keys: [`${MOD}`, ','], label: t('actions.settings') },
     { keys: ['G', 'H'], label: t('settings.shortcut.goHistory') },
     { keys: ['G', 'C'], label: t('settings.shortcut.goChanges') },
     { keys: [`${MOD}`, '↵'], label: t('settings.shortcut.commit') },
@@ -74,7 +75,6 @@ function Segmented<T extends string>({
 export function SettingsDialog(): React.JSX.Element | null {
   const { t, i18n } = useTranslation()
   const open = useRepoStore((s) => s.settingsOpen)
-  const openSettings = useRepoStore((s) => s.openSettings)
   const closeSettings = useRepoStore((s) => s.closeSettings)
   const themeMode = useRepoStore((s) => s.themeMode)
   const setThemeMode = useRepoStore((s) => s.setThemeMode)
@@ -84,22 +84,47 @@ export function SettingsDialog(): React.JSX.Element | null {
   const setTemplate = useRepoStore((s) => s.setTemplate)
   const defaultView = useRepoStore((s) => s.defaultView)
   const setDefaultView = useRepoStore((s) => s.setDefaultView)
+  const bindings = useShortcutsStore((s) => s.bindings)
+  const setBinding = useShortcutsStore((s) => s.setBinding)
+  const resetBinding = useShortcutsStore((s) => s.resetBinding)
+  const resetAll = useShortcutsStore((s) => s.resetAll)
   const [section, setSection] = useState<SectionId>('general')
+  const [recordingId, setRecordingId] = useState<string | null>(null)
 
-  // Global open/close shortcut (Cmd/Ctrl+,) and Escape to dismiss.
+  // Escape dismisses (the Cmd/Ctrl+, toggle is owned by the global dispatcher).
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if ((e.metaKey || e.ctrlKey) && e.key === ',') {
-        e.preventDefault()
-        if (useRepoStore.getState().settingsOpen) closeSettings()
-        else openSettings()
-      } else if (e.key === 'Escape' && useRepoStore.getState().settingsOpen) {
-        closeSettings()
-      }
+      if (e.key === 'Escape' && useRepoStore.getState().settingsOpen) closeSettings()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [openSettings, closeSettings])
+  }, [closeSettings])
+
+  // Record a new combo for a command. Captures in the capture phase so it
+  // pre-empts the global dispatcher; Escape cancels without closing Settings.
+  function startRecording(id: string): void {
+    if (recordingId) return
+    setRecordingId(id)
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        e.stopImmediatePropagation()
+        cleanup()
+        return
+      }
+      const combo = comboFromEvent(e)
+      if (!combo) return
+      e.preventDefault()
+      e.stopImmediatePropagation()
+      setBinding(id, combo)
+      cleanup()
+    }
+    const cleanup = (): void => {
+      window.removeEventListener('keydown', onKey, true)
+      setRecordingId(null)
+    }
+    window.addEventListener('keydown', onKey, true)
+  }
 
   if (!open) return null
 
@@ -255,19 +280,86 @@ export function SettingsDialog(): React.JSX.Element | null {
 
           {section === 'shortcuts' && (
             <section>
-              <h3 className="mb-3 text-sm font-semibold text-fg">{t('settings.shortcuts')}</h3>
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-fg">{t('settings.shortcuts')}</h3>
+                <button
+                  type="button"
+                  onClick={resetAll}
+                  className="rounded-[var(--radius-card)] border border-border px-2 py-1 text-[11px] text-fg-muted hover:bg-surface-2 hover:text-fg"
+                >
+                  {t('settings.shortcut.resetAll')}
+                </button>
+              </div>
+              <p className="mb-2 text-[11px] leading-relaxed text-fg-subtle">
+                {t('settings.shortcut.editHint')}
+              </p>
               <ul className="flex flex-col">
-                {shortcuts(t).map((s) => (
+                {SHORTCUT_COMMANDS.map((cmd) => {
+                  const combo = bindings[cmd.id]
+                  const recording = recordingId === cmd.id
+                  return (
+                    <li
+                      key={cmd.id}
+                      className="flex items-center justify-between gap-4 border-b border-border py-2 last:border-0"
+                    >
+                      <span className="text-xs text-fg-muted">{t(cmd.labelKey)}</span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => startRecording(cmd.id)}
+                          className={`flex min-h-[26px] min-w-[96px] items-center justify-center gap-1 rounded-[5px] border px-2 py-0.5 transition-colors ${
+                            recording
+                              ? 'border-accent text-accent'
+                              : 'border-border text-fg hover:bg-surface-2'
+                          }`}
+                        >
+                          {recording ? (
+                            <span className="text-[11px]">{t('settings.shortcut.recording')}</span>
+                          ) : combo ? (
+                            comboKeys(combo).map((k, i) => (
+                              <kbd
+                                key={i}
+                                className="rounded-[4px] bg-bg px-1.5 py-0.5 text-[11px] text-fg"
+                              >
+                                {k}
+                              </kbd>
+                            ))
+                          ) : (
+                            <span className="text-[11px] text-fg-subtle">
+                              {t('settings.shortcut.unbound')}
+                            </span>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => resetBinding(cmd.id)}
+                          title={t('settings.shortcut.reset')}
+                          aria-label={t('settings.shortcut.reset')}
+                          className="rounded-[var(--radius-card)] p-1 text-fg-subtle hover:bg-surface-2 hover:text-fg"
+                        >
+                          <RotateCcw size={13} strokeWidth={1.75} />
+                        </button>
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+
+              <p className="mb-2 mt-4 text-[11px] font-medium uppercase tracking-wide text-fg-subtle">
+                {t('settings.shortcut.fixed')}
+              </p>
+              <ul className="flex flex-col">
+                {fixedShortcuts(t).map((s) => (
                   <li
                     key={s.label}
-                    className="flex items-center justify-between gap-4 border-b border-border py-2.5 last:border-0"
+                    className="flex items-center justify-between gap-4 border-b border-border py-2 last:border-0"
                   >
                     <span className="text-xs text-fg-muted">{s.label}</span>
                     <span className="flex items-center gap-1">
                       {s.keys.map((k, i) => (
                         <kbd
                           key={i}
-                          className="min-w-[22px] rounded-[5px] border border-border bg-bg px-1.5 py-0.5 text-center text-[11px] text-fg"
+                          className="min-w-[22px] rounded-[5px] border border-border bg-bg px-1.5 py-0.5 text-center text-[11px] text-fg-subtle"
                         >
                           {k}
                         </kbd>

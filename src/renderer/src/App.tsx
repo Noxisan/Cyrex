@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRepoStore } from './store/repoStore'
 import { useProgressStore } from './store/progressStore'
+import { useGlobalShortcuts } from './hooks/useGlobalShortcuts'
 import { TitleBar } from './components/TitleBar'
 import { GitProgressBar } from './components/GitProgressBar'
 import { ResizeHandle } from './components/ResizeHandle'
@@ -40,6 +41,9 @@ export function App(): React.JSX.Element {
 
   // Feed the global progress bar from the main-process git progress stream.
   useEffect(() => window.cyrex.onGitProgress(setProgress), [setProgress])
+
+  // Customizable keyboard shortcuts (Settings → Shortcuts).
+  useGlobalShortcuts()
 
   // Resizable commit-detail panel: drag its left edge to widen/narrow it.
   const splitRef = useRef<HTMLDivElement>(null)

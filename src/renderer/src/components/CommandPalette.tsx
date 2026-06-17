@@ -55,7 +55,6 @@ interface Command {
 export function CommandPalette(): React.JSX.Element | null {
   const { t } = useTranslation()
   const open = useRepoStore((s) => s.paletteOpen)
-  const togglePalette = useRepoStore((s) => s.togglePalette)
   const closePalette = useRepoStore((s) => s.closePalette)
   const activePath = useRepoStore((s) => s.activePath)
   const setViewMode = useRepoStore((s) => s.setViewMode)
@@ -87,18 +86,6 @@ export function CommandPalette(): React.JSX.Element | null {
     return () => clearTimeout(id)
   }, [query])
   const { data: commitMatches } = useSearch(activePath, debounced)
-
-  // Global open/close shortcut. Mounted always, so this is the app's Cmd/Ctrl+K.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault()
-        togglePalette()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [togglePalette])
 
   // Keyboard-first view chords: press `g` then `h` (history) or `c` (changes).
   // Ignored while typing in a field or with a modifier held, so it never eats
