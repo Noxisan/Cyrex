@@ -279,6 +279,12 @@
     "zoomIn": "Increase text size",
     "zoomOut": "Decrease text size",
     "zoomReset": "Reset to 100%",
+    "diff": "Diff",
+    "diffDefaultView": "Default layout",
+    "diffWrap": "Wrap long lines",
+    "diffTabWidth": "Tab width",
+    "on": "On",
+    "off": "Off",
     "template": "Theme template",
     "templateHint": "Pick a full color scheme. Theme and accent below apply to the Classic template.",
     "custom": {

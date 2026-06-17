@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Check,
+  FileDiff,
   Keyboard,
   Minus,
   Monitor,
@@ -14,8 +15,14 @@ import {
   UserRound,
   X
 } from 'lucide-react'
-import { ACCENTS, MAX_FONT_SCALE, MIN_FONT_SCALE, useRepoStore } from '../store/repoStore'
-import type { ThemeMode, ViewMode } from '../store/repoStore'
+import {
+  ACCENTS,
+  DIFF_TAB_WIDTHS,
+  MAX_FONT_SCALE,
+  MIN_FONT_SCALE,
+  useRepoStore
+} from '../store/repoStore'
+import type { DiffMode, ThemeMode, ViewMode } from '../store/repoStore'
 import { useShortcutsStore } from '../store/shortcutsStore'
 import { TEMPLATES, CUSTOM_ID, CUSTOM_FIELDS } from '../lib/templates'
 import { SHORTCUT_COMMANDS, comboFromEvent, comboKeys } from '../lib/shortcuts'
@@ -23,7 +30,7 @@ import { MOD_KEY as MOD } from '../lib/platform'
 import { LANGUAGES } from '../i18n'
 import { IdentitySettings } from './IdentitySettings'
 
-type SectionId = 'general' | 'appearance' | 'git' | 'shortcuts'
+type SectionId = 'general' | 'appearance' | 'diff' | 'git' | 'shortcuts'
 
 /** Built-in, non-rebindable shortcuts shown for reference. */
 function fixedShortcuts(t: (k: string) => string): { keys: string[]; label: string }[] {
@@ -94,6 +101,12 @@ export function SettingsDialog(): React.JSX.Element | null {
   const setDefaultView = useRepoStore((s) => s.setDefaultView)
   const fontScale = useRepoStore((s) => s.fontScale)
   const setFontScale = useRepoStore((s) => s.setFontScale)
+  const diffMode = useRepoStore((s) => s.diffMode)
+  const setDiffMode = useRepoStore((s) => s.setDiffMode)
+  const diffWrap = useRepoStore((s) => s.diffWrap)
+  const setDiffWrap = useRepoStore((s) => s.setDiffWrap)
+  const diffTabWidth = useRepoStore((s) => s.diffTabWidth)
+  const setDiffTabWidth = useRepoStore((s) => s.setDiffTabWidth)
   const bindings = useShortcutsStore((s) => s.bindings)
   const setBinding = useShortcutsStore((s) => s.setBinding)
   const resetBinding = useShortcutsStore((s) => s.resetBinding)
@@ -141,6 +154,7 @@ export function SettingsDialog(): React.JSX.Element | null {
   const nav: { id: SectionId; label: string; icon: typeof Sun }[] = [
     { id: 'general', label: t('settings.general'), icon: SlidersHorizontal },
     { id: 'appearance', label: t('settings.appearance'), icon: Palette },
+    { id: 'diff', label: t('settings.diff'), icon: FileDiff },
     { id: 'git', label: t('settings.git'), icon: UserRound },
     { id: 'shortcuts', label: t('settings.shortcuts'), icon: Keyboard }
   ]
@@ -365,6 +379,41 @@ export function SettingsDialog(): React.JSX.Element | null {
                   ))}
                 </div>
               </div>
+            </section>
+          )}
+
+          {section === 'diff' && (
+            <section>
+              <h3 className="mb-3 text-sm font-semibold text-fg">{t('settings.diff')}</h3>
+              <Row label={t('settings.diffDefaultView')}>
+                <Segmented<DiffMode>
+                  value={diffMode}
+                  onChange={setDiffMode}
+                  options={[
+                    { value: 'inline', label: t('diff.inline') },
+                    { value: 'split', label: t('diff.split') }
+                  ]}
+                />
+              </Row>
+              <div className="border-t border-border" />
+              <Row label={t('settings.diffWrap')}>
+                <Segmented<'on' | 'off'>
+                  value={diffWrap ? 'on' : 'off'}
+                  onChange={(v) => setDiffWrap(v === 'on')}
+                  options={[
+                    { value: 'off', label: t('settings.off') },
+                    { value: 'on', label: t('settings.on') }
+                  ]}
+                />
+              </Row>
+              <div className="border-t border-border" />
+              <Row label={t('settings.diffTabWidth')}>
+                <Segmented<string>
+                  value={String(diffTabWidth)}
+                  onChange={(v) => setDiffTabWidth(Number(v))}
+                  options={DIFF_TAB_WIDTHS.map((w) => ({ value: String(w), label: String(w) }))}
+                />
+              </Row>
             </section>
           )}
 

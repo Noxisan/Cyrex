@@ -20,6 +20,8 @@ export type Theme = 'dark' | 'light'
 /** The user's theme preference; `system` follows the OS. */
 export type ThemeMode = 'dark' | 'light' | 'system'
 export type ViewMode = 'history' | 'changes'
+/** Diff rendering layout: unified (inline) or side-by-side (split). */
+export type DiffMode = 'inline' | 'split'
 
 /**
  * An accent palette. Only the brand/interactive accent is themed here — danger,
@@ -108,6 +110,12 @@ interface RepoState {
   defaultView: ViewMode
   /** Renderer zoom factor (interface / text scale), 1 = 100%. */
   fontScale: number
+  /** Default diff layout, also toggled live from the diff panel. */
+  diffMode: DiffMode
+  /** Wrap long diff lines instead of scrolling horizontally. */
+  diffWrap: boolean
+  /** Tab width (in spaces) for rendered diff lines. */
+  diffTabWidth: number
 
   addRepo: (repo: RepoRef) => void
   removeRepo: (path: string) => void
@@ -149,6 +157,9 @@ interface RepoState {
   setCustomDark: (dark: boolean) => void
   setDefaultView: (view: ViewMode) => void
   setFontScale: (scale: number) => void
+  setDiffMode: (mode: DiffMode) => void
+  setDiffWrap: (wrap: boolean) => void
+  setDiffTabWidth: (width: number) => void
 }
 
 const REPOS_KEY = 'cyrex.repos'
@@ -159,10 +170,15 @@ const TEMPLATE_KEY = 'cyrex.template'
 const CUSTOM_KEY = 'cyrex.customTemplate'
 const DEFAULT_VIEW_KEY = 'cyrex.defaultView'
 const FONT_SCALE_KEY = 'cyrex.fontScale'
+const DIFF_MODE_KEY = 'cyrex.diffMode'
+const DIFF_WRAP_KEY = 'cyrex.diffWrap'
+const DIFF_TAB_KEY = 'cyrex.diffTabWidth'
 
 /** Interface zoom bounds (1 = 100%); steps of 0.1 in the Settings control. */
 export const MIN_FONT_SCALE = 0.8
 export const MAX_FONT_SCALE = 1.6
+/** Allowed diff tab widths (Settings + per-render tab-size). */
+export const DIFF_TAB_WIDTHS = [2, 4, 8]
 
 function initialTemplate(): string {
   const id = localStorage.getItem(TEMPLATE_KEY)
@@ -221,6 +237,17 @@ function initialFontScale(): number {
 /** Apply the interface zoom factor to the renderer (scales the whole UI). */
 export function applyFontScale(scale: number): void {
   window.cyrex.windowControls.setZoom(scale)
+}
+
+function initialDiffMode(): DiffMode {
+  return localStorage.getItem(DIFF_MODE_KEY) === 'split' ? 'split' : 'inline'
+}
+function initialDiffWrap(): boolean {
+  return localStorage.getItem(DIFF_WRAP_KEY) === '1'
+}
+function initialDiffTabWidth(): number {
+  const n = Number(localStorage.getItem(DIFF_TAB_KEY))
+  return DIFF_TAB_WIDTHS.includes(n) ? n : 4
 }
 
 export function applyTheme(theme: Theme): void {
@@ -313,6 +340,9 @@ export const useRepoStore = create<RepoState>((set, get) => ({
   customDark: loadCustom().dark,
   defaultView: initialDefaultView(),
   fontScale: initialFontScale(),
+  diffMode: initialDiffMode(),
+  diffWrap: initialDiffWrap(),
+  diffTabWidth: initialDiffTabWidth(),
 
   addRepo: (repo) =>
     set((s) => {
@@ -447,6 +477,19 @@ export const useRepoStore = create<RepoState>((set, get) => ({
     localStorage.setItem(FONT_SCALE_KEY, String(clamped))
     applyFontScale(clamped)
     set({ fontScale: clamped })
+  },
+
+  setDiffMode: (mode) => {
+    localStorage.setItem(DIFF_MODE_KEY, mode)
+    set({ diffMode: mode })
+  },
+  setDiffWrap: (wrap) => {
+    localStorage.setItem(DIFF_WRAP_KEY, wrap ? '1' : '0')
+    set({ diffWrap: wrap })
+  },
+  setDiffTabWidth: (width) => {
+    localStorage.setItem(DIFF_TAB_KEY, String(width))
+    set({ diffTabWidth: width })
   }
 }))
 
