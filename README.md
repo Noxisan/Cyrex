@@ -67,6 +67,22 @@ npm run build      # type-check and build to out/
 npm run dist       # package installers for the current platform
 ```
 
+### Hosting sign-in (optional OAuth)
+
+Connecting GitHub, GitLab, or Bitbucket accounts works out of the box via personal access / API tokens (pasted, then stored in the OS keychain). To enable one-click browser sign-in instead, register an OAuth app per provider and supply its credentials at build/dev time. Copy `.env.example` to `.env` (gitignored) and fill in the values, or export them as environment variables:
+
+| Provider | Variables | Flow | Callback to register |
+|---|---|---|---|
+| GitHub | `CYREX_GITHUB_CLIENT_ID` | Device flow (public client) | none |
+| GitLab | `CYREX_GITLAB_CLIENT_ID` | Device flow (public client) | none |
+| Bitbucket | `CYREX_BITBUCKET_CLIENT_ID`, `CYREX_BITBUCKET_CLIENT_SECRET` | Authorization code (loopback) | `http://localhost:47600/callback` |
+
+Bitbucket has no device flow, so it uses an OAuth consumer (Workspace settings, OAuth consumers). Set its callback URL to `http://localhost:47600/callback`, grant the Account (read) and Repositories (read and write) permissions, and pass the consumer's key/secret as the two variables above. When a provider's variables are unset, Cyrex falls back to token paste for that provider.
+
+For Bitbucket you don't have to rebuild at all: pick Bitbucket in the connect dialog, choose **Log in with browser**, and Cyrex prompts once for the consumer Key and Secret (stored in the OS keychain). The `CYREX_BITBUCKET_*` build vars are only for shipping a build where end users never see that prompt.
+
+Note: Bitbucket app passwords are deprecated (they stop working 2026-06-09); the token-paste path uses an Atlassian API token (`id.atlassian.com`) created with scopes `read:user:bitbucket`, `read:repository:bitbucket`, `write:repository:bitbucket`, entered as `email:api_token`.
+
 ### Git engine note
 
 Cyrex is a UI over real Git. The engine layer lives only in `src/main/git/` and the renderer never touches Git directly — all access goes through typed, zod-validated, allow-listed IPC.

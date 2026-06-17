@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Check, Cloud, GitBranch, Tag } from 'lucide-react'
 import { computeLayout } from '@shared/graph'
 import type { Commit } from '@shared/types'
-import { useBranches, useCherryPick, useLog, useRevert, useSearch } from '../hooks/useRepo'
+import { useBranches, useCherryPick, useInfiniteLog, useRevert, useSearch } from '../hooks/useRepo'
 import { useRepoStore } from '../store/repoStore'
 import { ContextMenu } from './ContextMenu'
 import type { MenuState } from './ContextMenu'
@@ -128,7 +128,15 @@ function SearchRow({
 
 export function GraphView({ repoPath }: { repoPath: string }): React.JSX.Element {
   const { t, i18n } = useTranslation()
-  const { data: commits, isLoading, error } = useLog(repoPath, { limit: 300 })
+  const {
+    data: logData,
+    isLoading,
+    error,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage
+  } = useInfiniteLog(repoPath)
+  const commits = useMemo(() => logData?.pages.flat(), [logData])
   const { data: branches } = useBranches(repoPath)
   const selectedSha = useRepoStore((s) => s.selectedSha)
   const selectCommit = useRepoStore((s) => s.selectCommit)
@@ -140,6 +148,24 @@ export function GraphView({ repoPath }: { repoPath: string }): React.JSX.Element
   const searchActive = searchQuery.trim().length > 0
   const search = useSearch(repoPath, searchQuery)
   const [menu, setMenu] = useState<MenuState | null>(null)
+
+  // Infinite history: when the bottom sentinel scrolls into view, pull the next
+  // page. rootMargin prefetches before the user actually hits the end.
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const root = scrollRef.current
+    const target = sentinelRef.current
+    if (!root || !target || !hasNextPage) return
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) void fetchNextPage()
+      },
+      { root, rootMargin: '400px' }
+    )
+    io.observe(target)
+    return () => io.disconnect()
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, commits])
 
   const rtf = useMemo(
     () => new Intl.RelativeTimeFormat(i18n.language, { numeric: 'auto', style: 'short' }),
@@ -224,7 +250,7 @@ export function GraphView({ repoPath }: { repoPath: string }): React.JSX.Element
       <div className="flex h-9 shrink-0 items-center border-b border-border px-4 text-xs font-medium uppercase tracking-wide text-fg-muted">
         {t('graph.title')}
       </div>
-      <div className="relative min-h-0 flex-1 overflow-auto">
+      <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-auto">
         <div
           className="relative"
           style={{ height: totalHeight, minWidth: REFS_W + graphWidth + 320 }}
@@ -319,6 +345,14 @@ export function GraphView({ repoPath }: { repoPath: string }): React.JSX.Element
             })}
           </svg>
         </div>
+        {(hasNextPage || isFetchingNextPage) && (
+          <div
+            ref={sentinelRef}
+            className="flex h-9 items-center justify-center text-[11px] text-fg-subtle"
+          >
+            {isFetchingNextPage ? t('graph.loadingMore') : ''}
+          </div>
+        )}
       </div>
       <ContextMenu state={menu} onClose={() => setMenu(null)} />
     </div>

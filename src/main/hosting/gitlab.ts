@@ -6,8 +6,14 @@
  * tokens, so the token-paste path works before any OAuth app exists.
  */
 
-import type { CreateRepoInput, HostingAccount, RemoteRepo } from '@shared/types'
-import type { DeviceCode, DevicePoll, HostingProvider } from './types'
+import type {
+  CreatePullRequestInput,
+  CreateRepoInput,
+  HostingAccount,
+  PullRequest,
+  RemoteRepo
+} from '@shared/types'
+import type { DeviceCode, DevicePoll, HostingProvider, RepoCoords } from './types'
 
 const BASE = 'https://gitlab.com'
 const API = `${BASE}/api/v4`
@@ -73,6 +79,11 @@ export const gitlab: HostingProvider = {
 
   supportsDeviceFlow() {
     return clientId().length > 0
+  },
+
+  // GitLab login uses a build-time application id, not an in-app entry.
+  oauthConfigurable() {
+    return false
   },
 
   async startDeviceLogin(): Promise<DeviceCode> {
@@ -163,5 +174,64 @@ export const gitlab: HostingProvider = {
       })
     })
     return toRemoteRepo(p)
+  },
+
+  async listPullRequests(token: string, repo: RepoCoords): Promise<PullRequest[]> {
+    const id = encodeURIComponent(repo.fullPath)
+    const mrs = await api<GlMergeRequest[]>(
+      token,
+      `/projects/${id}/merge_requests?state=opened&per_page=50&order_by=updated_at&sort=desc`
+    )
+    return mrs.map(toPullRequest)
+  },
+
+  async createPullRequest(
+    token: string,
+    repo: RepoCoords,
+    input: CreatePullRequestInput
+  ): Promise<PullRequest> {
+    const id = encodeURIComponent(repo.fullPath)
+    // GitLab marks a draft MR by a "Draft:" title prefix; there is no separate flag.
+    const title = input.draft ? `Draft: ${input.title}` : input.title
+    const mr = await api<GlMergeRequest>(token, `/projects/${id}/merge_requests`, {
+      method: 'POST',
+      body: JSON.stringify({
+        title,
+        description: input.body ?? '',
+        source_branch: input.sourceBranch,
+        target_branch: input.targetBranch
+      })
+    })
+    return toPullRequest(mr)
+  }
+}
+
+interface GlMergeRequest {
+  id: number
+  iid: number
+  title: string
+  state: 'opened' | 'closed' | 'merged' | 'locked'
+  draft: boolean
+  web_url: string
+  created_at: string | null
+  updated_at: string | null
+  author: { username: string } | null
+  source_branch: string
+  target_branch: string
+}
+
+function toPullRequest(m: GlMergeRequest): PullRequest {
+  return {
+    id: String(m.id),
+    number: m.iid,
+    title: m.title,
+    state: m.state === 'opened' ? 'open' : m.state === 'merged' ? 'merged' : 'closed',
+    author: m.author?.username ?? null,
+    sourceBranch: m.source_branch,
+    targetBranch: m.target_branch,
+    isDraft: m.draft,
+    htmlUrl: m.web_url,
+    createdAt: m.created_at,
+    updatedAt: m.updated_at
   }
 }

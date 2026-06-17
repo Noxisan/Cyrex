@@ -16,9 +16,15 @@
 
 import { createServer, type Server, type IncomingMessage, type ServerResponse } from 'node:http'
 import { randomUUID } from 'node:crypto'
-import type { CreateRepoInput, HostingAccount, RemoteRepo } from '@shared/types'
+import type {
+  CreatePullRequestInput,
+  CreateRepoInput,
+  HostingAccount,
+  PullRequest,
+  RemoteRepo
+} from '@shared/types'
 import { getOAuthApp } from '../credentials'
-import type { DeviceCode, DevicePoll, HostingProvider } from './types'
+import type { DeviceCode, DevicePoll, HostingProvider, RepoCoords } from './types'
 
 const API = 'https://api.bitbucket.org/2.0'
 const AUTHORIZE_URL = 'https://bitbucket.org/site/oauth2/authorize'
@@ -380,5 +386,61 @@ export const bitbucket: HostingProvider = {
       })
     })
     return toRemoteRepo(r)
+  },
+
+  async listPullRequests(secret: string, repo: RepoCoords): Promise<PullRequest[]> {
+    const slug = `${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.name)}`
+    const body = await api<{ values: BbPull[] }>(
+      secret,
+      `/repositories/${slug}/pullrequests?state=OPEN&pagelen=50&sort=-updated_on`
+    )
+    return body.values.map(toPullRequest)
+  },
+
+  async createPullRequest(
+    secret: string,
+    repo: RepoCoords,
+    input: CreatePullRequestInput
+  ): Promise<PullRequest> {
+    const slug = `${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.name)}`
+    const pr = await api<BbPull>(secret, `/repositories/${slug}/pullrequests`, {
+      method: 'POST',
+      body: JSON.stringify({
+        title: input.title,
+        description: input.body ?? '',
+        source: { branch: { name: input.sourceBranch } },
+        destination: { branch: { name: input.targetBranch } }
+      })
+    })
+    return toPullRequest(pr)
+  }
+}
+
+interface BbPull {
+  id: number
+  title: string
+  state: 'OPEN' | 'MERGED' | 'DECLINED' | 'SUPERSEDED'
+  author: { nickname?: string; display_name?: string } | null
+  source: { branch: { name: string } }
+  destination: { branch: { name: string } }
+  created_on: string | null
+  updated_on: string | null
+  links?: { html?: { href?: string } }
+}
+
+function toPullRequest(p: BbPull): PullRequest {
+  return {
+    id: String(p.id),
+    number: p.id,
+    title: p.title,
+    state: p.state === 'OPEN' ? 'open' : p.state === 'MERGED' ? 'merged' : 'closed',
+    author: p.author?.nickname ?? p.author?.display_name ?? null,
+    sourceBranch: p.source.branch.name,
+    targetBranch: p.destination.branch.name,
+    // Bitbucket Cloud has no draft PR concept.
+    isDraft: false,
+    htmlUrl: p.links?.html?.href ?? `https://bitbucket.org/${p.id}`,
+    createdAt: p.created_on,
+    updatedAt: p.updated_on
   }
 }
