@@ -9,6 +9,7 @@
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
+    "dev:x11": "ELECTRON_OZONE_PLATFORM_HINT=x11 electron-vite dev",
     "build": "npm run typecheck && electron-vite build",
     "preview": "electron-vite preview",
     "start": "electron-vite preview",
