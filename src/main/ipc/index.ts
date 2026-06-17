@@ -31,6 +31,7 @@ import {
   hostingStartLoginSchema,
   identitySchema,
   imageVersionsSchema,
+  initSchema,
   setGlobalIdentitySchema,
   setRepoIdentitySchema,
   setRemoteSchema,
@@ -146,6 +147,11 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(
     IpcChannels.RepoOpen,
     wrap(repoPathSchema, (req) => engine.openRepo(req.path))
+  )
+
+  ipcMain.handle(
+    IpcChannels.RepoInit,
+    wrap(initSchema, (req) => engine.initRepo(req.parentDir, req.name))
   )
 
   ipcMain.handle(
