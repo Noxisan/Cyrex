@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Check,
+  Coffee,
   FileDiff,
+  Info,
   Keyboard,
   Minus,
   Monitor,
@@ -31,8 +33,23 @@ import { SHORTCUT_COMMANDS, comboFromEvent, comboKeys } from '../lib/shortcuts'
 import { MOD_KEY as MOD } from '../lib/platform'
 import { LANGUAGES } from '../i18n'
 import { IdentitySettings } from './IdentitySettings'
+import { ProviderIcon } from './BrandIcon'
+import markUrl from '../../../../build/icon.png'
 
-type SectionId = 'general' | 'appearance' | 'diff' | 'git' | 'shortcuts'
+type SectionId = 'general' | 'appearance' | 'diff' | 'git' | 'shortcuts' | 'about'
+
+/** Core technologies, shown on the About page. */
+const TECH = [
+  'Electron',
+  'React',
+  'TypeScript',
+  'electron-vite',
+  'Tailwind CSS',
+  'Zustand',
+  'TanStack Query',
+  'i18next',
+  'Lucide'
+]
 
 /** Built-in, non-rebindable shortcuts shown for reference. */
 function fixedShortcuts(t: (k: string) => string): { keys: string[]; label: string }[] {
@@ -134,6 +151,12 @@ export function SettingsDialog(): React.JSX.Element | null {
   const [appVersion, setAppVersion] = useState('')
   const [update, setUpdate] = useState<UpdateInfo | null>(null)
   const [checking, setChecking] = useState(false)
+  const [canAuto, setCanAuto] = useState(false)
+  const [dl, setDl] = useState<{
+    state: 'idle' | 'downloading' | 'downloaded' | 'error'
+    percent: number
+    error: string
+  }>({ state: 'idle', percent: 0, error: '' })
   const bindings = useShortcutsStore((s) => s.bindings)
   const setBinding = useShortcutsStore((s) => s.setBinding)
   const resetBinding = useShortcutsStore((s) => s.resetBinding)
@@ -151,13 +174,27 @@ export function SettingsDialog(): React.JSX.Element | null {
     return () => window.removeEventListener('keydown', onKey)
   }, [closeSettings])
 
-  // Load the running version whenever Settings opens.
+  // Load the running version + auto-update capability whenever Settings opens.
   useEffect(() => {
     if (!open) return
     void window.cyrex.app.version().then((r) => {
       if (r.ok) setAppVersion(r.data)
     })
+    void window.cyrex.app.updateCapability().then((r) => {
+      if (r.ok) setCanAuto(r.data)
+    })
   }, [open])
+
+  // Stream download progress / completion / errors from electron-updater.
+  useEffect(
+    () =>
+      window.cyrex.app.onUpdateEvent((ev) => {
+        if (ev.type === 'progress') setDl({ state: 'downloading', percent: ev.percent, error: '' })
+        else if (ev.type === 'downloaded') setDl((d) => ({ ...d, state: 'downloaded' }))
+        else if (ev.type === 'error') setDl({ state: 'error', percent: 0, error: ev.message })
+      }),
+    []
+  )
 
   async function checkUpdates(): Promise<void> {
     setChecking(true)
@@ -168,6 +205,13 @@ export function SettingsDialog(): React.JSX.Element | null {
         ? r.data
         : { current: appVersion, latest: null, updateAvailable: false, url: null, error: r.error }
     )
+  }
+
+  async function downloadUpdate(): Promise<void> {
+    setDl({ state: 'downloading', percent: 0, error: '' })
+    const r = await window.cyrex.app.downloadUpdate()
+    if (r.ok) setDl((d) => ({ ...d, state: 'downloaded' }))
+    else setDl({ state: 'error', percent: 0, error: r.error })
   }
 
   // Record a new combo for a command. Captures in the capture phase so it
@@ -203,7 +247,8 @@ export function SettingsDialog(): React.JSX.Element | null {
     { id: 'appearance', label: t('settings.appearance'), icon: Palette },
     { id: 'diff', label: t('settings.diff'), icon: FileDiff },
     { id: 'git', label: t('settings.git'), icon: UserRound },
-    { id: 'shortcuts', label: t('settings.shortcuts'), icon: Keyboard }
+    { id: 'shortcuts', label: t('settings.shortcuts'), icon: Keyboard },
+    { id: 'about', label: t('settings.about'), icon: Info }
   ]
 
   return (
@@ -329,27 +374,67 @@ export function SettingsDialog(): React.JSX.Element | null {
                 </button>
               </Row>
               {update && !checking && (
-                <p className="mb-1 text-[11px] leading-snug">
+                <div className="mb-1 text-[11px] leading-snug">
                   {update.error ? (
                     <span className="text-danger">{t('settings.checkFailed')}</span>
                   ) : update.updateAvailable && update.latest ? (
-                    <span className="text-fg-muted">
-                      {t('settings.updateAvailable', { version: update.latest })}{' '}
-                      {update.url && (
-                        <a
-                          href={update.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-accent hover:underline"
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-fg-muted">
+                        {t('settings.updateAvailable', { version: update.latest })}
+                      </span>
+                      {canAuto && dl.state === 'downloading' ? (
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-2">
+                            <div
+                              className="h-full rounded-full bg-accent transition-[width] duration-150"
+                              style={{ width: `${dl.percent}%` }}
+                            />
+                          </div>
+                          <span className="shrink-0 text-fg-subtle">
+                            {t('settings.downloading')} {dl.percent}%
+                          </span>
+                        </div>
+                      ) : canAuto && dl.state === 'downloaded' ? (
+                        <button
+                          type="button"
+                          onClick={() => void window.cyrex.app.quitAndInstall()}
+                          className="self-start rounded-[var(--radius-card)] bg-accent px-2.5 py-1 text-xs font-medium text-accent-fg hover:bg-accent-hover"
                         >
-                          {t('settings.viewRelease')}
-                        </a>
+                          {t('settings.restartInstall')}
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          {canAuto && (
+                            <button
+                              type="button"
+                              onClick={() => void downloadUpdate()}
+                              className="rounded-[var(--radius-card)] bg-accent px-2.5 py-1 text-xs font-medium text-accent-fg hover:bg-accent-hover"
+                            >
+                              {t('settings.downloadInstall')}
+                            </button>
+                          )}
+                          {update.url && (
+                            <a
+                              href={update.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-accent hover:underline"
+                            >
+                              {t('settings.viewRelease')}
+                            </a>
+                          )}
+                        </div>
                       )}
-                    </span>
+                      {dl.state === 'error' && (
+                        <span className="text-danger">
+                          {dl.error || t('settings.downloadFailed')}
+                        </span>
+                      )}
+                    </div>
                   ) : (
                     <span className="text-diff-add">{t('settings.upToDate')}</span>
                   )}
-                </p>
+                </div>
               )}
               <Row label={t('settings.checkOnStartup')} desc={t('settings.checkOnStartupDesc')}>
                 <Segmented<'on' | 'off'>
@@ -645,6 +730,60 @@ export function SettingsDialog(): React.JSX.Element | null {
                   </li>
                 ))}
               </ul>
+            </section>
+          )}
+
+          {section === 'about' && (
+            <section>
+              <div className="flex items-center gap-3">
+                <img src={markUrl} alt="" className="size-12 shrink-0 rounded-[8px]" />
+                <div className="min-w-0">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-lg font-semibold tracking-wide text-accent">CYREX</span>
+                    <span className="font-mono text-xs text-fg-subtle">v{appVersion || '—'}</span>
+                  </div>
+                  <p className="text-xs text-fg-muted">{t('settings.aboutTagline')}</p>
+                </div>
+              </div>
+
+              <p className="mt-4 text-xs text-fg">{t('settings.createdBy', { author: 'Noxisan' })}</p>
+
+              <div className="mt-2 flex flex-wrap gap-2">
+                <a
+                  href="https://github.com/Noxisan/Cyrex"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1.5 rounded-[var(--radius-card)] border border-border px-2.5 py-1.5 text-xs text-fg-muted hover:bg-surface-2 hover:text-fg"
+                >
+                  <ProviderIcon id="github" size={14} /> {t('settings.viewSource')}
+                </a>
+                <a
+                  href="https://ko-fi.com/noxisan"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1.5 rounded-[var(--radius-card)] border border-border px-2.5 py-1.5 text-xs text-fg-muted hover:bg-surface-2 hover:text-accent"
+                >
+                  <Coffee size={14} strokeWidth={1.75} /> {t('settings.supportKofi')}
+                </a>
+              </div>
+
+              <div className="mt-5 border-t border-border pt-3">
+                <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-fg-subtle">
+                  {t('settings.builtWith')}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {TECH.map((name) => (
+                    <span
+                      key={name}
+                      className="rounded-[var(--radius-card)] bg-surface-2 px-2 py-0.5 text-[11px] text-fg-muted"
+                    >
+                      {name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <p className="mt-4 text-[11px] text-fg-subtle">MIT License · © Noxisan</p>
             </section>
           )}
         </div>

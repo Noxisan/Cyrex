@@ -1,6 +1,6 @@
 {
   "name": "cyrex",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Cyrex — a calm, cross-platform visual Git client.",
   "author": "Noxisan",
   "license": "MIT",
@@ -27,6 +27,7 @@
     "@tanstack/react-query": "^5.101.0",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/xterm": "^6.0.0",
+    "electron-updater": "^6.8.9",
     "highlight.js": "^11.11.1",
     "i18next": "^26.3.1",
     "lucide-react": "^1.17.0",

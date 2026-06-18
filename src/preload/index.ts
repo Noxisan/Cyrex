@@ -5,7 +5,7 @@
  */
 
 import { contextBridge, ipcRenderer, webFrame } from 'electron'
-import { GitChannels, IpcChannels, TerminalChannels, WindowChannels } from '@shared/ipc'
+import { AppChannels, GitChannels, IpcChannels, TerminalChannels, WindowChannels } from '@shared/ipc'
 import type { IpcApi } from '@shared/ipc'
 import type {
   GitProgress,
@@ -14,7 +14,8 @@ import type {
   RebaseTodoItem,
   TerminalData,
   TerminalExit,
-  TerminalSession
+  TerminalSession,
+  UpdateEvent
 } from '@shared/types'
 
 type Req<C extends keyof IpcApi> = IpcApi[C]['request']
@@ -29,7 +30,15 @@ export const cyrexApi = {
   /** App version + GitHub release update check (no repo data leaves the app). */
   app: {
     version: () => invoke(IpcChannels.AppVersion),
-    checkForUpdates: () => invoke(IpcChannels.AppCheckUpdates)
+    checkForUpdates: () => invoke(IpcChannels.AppCheckUpdates),
+    updateCapability: () => invoke(IpcChannels.AppUpdateCapability),
+    downloadUpdate: () => invoke(IpcChannels.AppDownloadUpdate),
+    quitAndInstall: () => invoke(IpcChannels.AppQuitAndInstall),
+    onUpdateEvent: (cb: (e: UpdateEvent) => void): (() => void) => {
+      const listener = (_e: unknown, payload: UpdateEvent): void => cb(payload)
+      ipcRenderer.on(AppChannels.UpdateEvent, listener)
+      return () => ipcRenderer.removeListener(AppChannels.UpdateEvent, listener)
+    }
   },
   identity: (path?: string) => invoke(IpcChannels.GitIdentity, { path }),
   setGlobalIdentity: (name: string, email: string) =>
@@ -177,6 +186,8 @@ export const cyrexApi = {
       input: { name: string; description?: string; private: boolean }
     ) => invoke(IpcChannels.HostingCreateRepo, { accountId, ...input }),
     pullRequests: (path: string) => invoke(IpcChannels.HostingListPullRequests, { path }),
+    pullRequestDetail: (path: string, number: number) =>
+      invoke(IpcChannels.HostingPullRequestDetail, { path, number }),
     createPullRequest: (
       path: string,
       input: {

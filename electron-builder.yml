@@ -35,9 +35,13 @@ linux:
   icon: build/icon.png
 
 # --- macOS: dmg (must be built on a real macOS machine / CI runner) ---
+# Build both Apple Silicon (arm64) and Intel (x64) dmgs so every Mac is covered.
 mac:
   target:
-    - dmg
+    - target: dmg
+      arch:
+        - arm64
+        - x64
   category: public.app-category.developer-tools
 
 # Publish built installers to the GitHub Release for the current version's tag.

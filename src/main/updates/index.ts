@@ -8,9 +8,12 @@
  * network operations are never silent.
  */
 
-import { app } from 'electron'
-import type { UpdateInfo } from '@shared/types'
+import { app, BrowserWindow } from 'electron'
+import electronUpdater from 'electron-updater'
+import { AppChannels } from '@shared/ipc'
+import type { UpdateEvent, UpdateInfo } from '@shared/types'
 
+const { autoUpdater } = electronUpdater
 const RELEASES_API = 'https://api.github.com/repos/Noxisan/Cyrex/releases/latest'
 
 /** Parse "v1.2.3" / "1.2.3-beta" into a comparable [major, minor, patch]. */
@@ -66,4 +69,55 @@ export async function checkForUpdates(): Promise<UpdateInfo> {
     const error = name === 'TimeoutError' ? 'The update check timed out.' : (e as Error).message
     return miss({ error })
   }
+}
+
+// ── In-app download + install (electron-updater) ─────────────────────────────
+// The GitHub-API check above runs everywhere. Downloading and installing only
+// works where electron-updater can replace the binary: a packaged NSIS build
+// (Windows) or AppImage (Linux). macOS requires a signed app (we ship unsigned),
+// and a .deb is owned by the system package manager — those fall back to the
+// "view release" link in the UI.
+
+autoUpdater.autoDownload = false
+autoUpdater.autoInstallOnAppQuit = true
+
+/** Whether this build can download and install updates itself. */
+export function canAutoUpdate(): boolean {
+  if (!app.isPackaged) return false
+  if (process.platform === 'win32') return true
+  if (process.platform === 'linux') return !!process.env.APPIMAGE
+  return false
+}
+
+function broadcast(event: UpdateEvent): void {
+  for (const w of BrowserWindow.getAllWindows()) {
+    if (!w.isDestroyed()) w.webContents.send(AppChannels.UpdateEvent, event)
+  }
+}
+
+let wired = false
+function wireEvents(): void {
+  if (wired) return
+  wired = true
+  autoUpdater.on('download-progress', (p) =>
+    broadcast({ type: 'progress', percent: Math.round(p.percent) })
+  )
+  autoUpdater.on('update-downloaded', (info) =>
+    broadcast({ type: 'downloaded', version: info.version })
+  )
+  autoUpdater.on('error', (err) => broadcast({ type: 'error', message: err.message }))
+}
+
+/** Check, then download the available update; resolves when the download finishes. */
+export async function downloadUpdate(): Promise<void> {
+  if (!canAutoUpdate()) throw new Error('In-app updates are not available for this build.')
+  wireEvents()
+  const result = await autoUpdater.checkForUpdates()
+  if (!result?.updateInfo) throw new Error('No update is available to download.')
+  await autoUpdater.downloadUpdate()
+}
+
+/** Quit the app and install a previously downloaded update. */
+export function quitAndInstall(): void {
+  autoUpdater.quitAndInstall()
 }

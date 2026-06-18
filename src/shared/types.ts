@@ -487,6 +487,15 @@ export interface CreatePullRequestInput {
   draft?: boolean
 }
 
+/** A pull request with its description and changed-file diffs, for the review view. */
+export interface PullRequestDetail {
+  pr: PullRequest
+  /** Description / body (markdown source, shown as text). */
+  body: string
+  /** Changed files with hunks, parsed from the provider's unified diff. */
+  files: DiffFile[]
+}
+
 /**
  * Result of listing pull requests for the active repo. Distinguishes a real list
  * from the benign "this repo's remote isn't a connected host" states, so the UI
@@ -511,3 +520,9 @@ export interface UpdateInfo {
   /** A friendly reason the check failed (offline, rate-limited, …), if any. */
   error?: string
 }
+
+/** Progress/outcome of an in-app update download (electron-updater). */
+export type UpdateEvent =
+  | { type: 'progress'; percent: number }
+  | { type: 'downloaded'; version: string }
+  | { type: 'error'; message: string }

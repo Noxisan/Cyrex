@@ -13,6 +13,7 @@ import type {
   HostingAccount,
   HostingProviderId,
   PullRequest,
+  PullRequestDetail,
   RemoteRepo
 } from '@shared/types'
 
@@ -59,6 +60,8 @@ export interface HostingProvider {
   createRepo(token: string, input: CreateRepoInput): Promise<RemoteRepo>
   /** Open pull/merge requests for a repo, newest first. */
   listPullRequests(token: string, repo: RepoCoords): Promise<PullRequest[]>
+  /** One pull/merge request with its description and changed-file diffs. */
+  getPullRequest(token: string, repo: RepoCoords, number: number): Promise<PullRequestDetail>
   createPullRequest(
     token: string,
     repo: RepoCoords,

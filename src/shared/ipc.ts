@@ -24,6 +24,7 @@ import type {
   LfsStatus,
   LogOptions,
   PullRequest,
+  PullRequestDetail,
   PullRequestList,
   RebaseResult,
   RebaseTodoItem,
@@ -146,6 +147,12 @@ export const IpcChannels = {
   AppVersion: 'app:version',
   /** Check the GitHub releases for a newer Cyrex version. */
   AppCheckUpdates: 'app:checkUpdates',
+  /** Whether this build can download and install updates itself. */
+  AppUpdateCapability: 'app:updateCapability',
+  /** Download the available update (progress streams on AppChannels.UpdateEvent). */
+  AppDownloadUpdate: 'app:downloadUpdate',
+  /** Quit and install a downloaded update. */
+  AppQuitAndInstall: 'app:quitAndInstall',
   /** Open a directory picker, returning the chosen path (or null). */
   PickDirectory: 'dialog:pickDirectory',
   // --- Remote hosting (GitHub / GitLab / Bitbucket). Tokens never cross IPC. ---
@@ -171,6 +178,8 @@ export const IpcChannels = {
   HostingCreateRepo: 'hosting:createRepo',
   /** List open pull/merge requests for the active repo's remote. */
   HostingListPullRequests: 'hosting:listPullRequests',
+  /** One pull/merge request with its description and changed-file diffs. */
+  HostingPullRequestDetail: 'hosting:pullRequestDetail',
   /** Open a pull/merge request from the active repo's connected account. */
   HostingCreatePullRequest: 'hosting:createPullRequest',
   /** Clone a repo; the account's token is resolved in-process, not via IPC. */
@@ -203,6 +212,11 @@ export const TerminalChannels = {
  */
 export const GitChannels = {
   Progress: 'git:progress'
+} as const
+
+/** Main→renderer push for in-app update download progress (electron-updater). */
+export const AppChannels = {
+  UpdateEvent: 'app:updateEvent'
 } as const
 
 /**
@@ -520,6 +534,18 @@ export interface IpcApi {
     request: void
     response: EngineResult<UpdateInfo>
   }
+  [IpcChannels.AppUpdateCapability]: {
+    request: void
+    response: EngineResult<boolean>
+  }
+  [IpcChannels.AppDownloadUpdate]: {
+    request: void
+    response: EngineResult<null>
+  }
+  [IpcChannels.AppQuitAndInstall]: {
+    request: void
+    response: EngineResult<null>
+  }
   [IpcChannels.PickDirectory]: {
     request: void
     response: EngineResult<string | null>
@@ -569,6 +595,10 @@ export interface IpcApi {
   [IpcChannels.HostingListPullRequests]: {
     request: { path: string }
     response: EngineResult<PullRequestList>
+  }
+  [IpcChannels.HostingPullRequestDetail]: {
+    request: { path: string; number: number }
+    response: EngineResult<PullRequestDetail>
   }
   [IpcChannels.HostingCreatePullRequest]: {
     request: {

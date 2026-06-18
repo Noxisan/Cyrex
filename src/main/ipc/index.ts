@@ -26,6 +26,7 @@ import {
   hostingCreateRepoSchema,
   hostingDisconnectSchema,
   hostingListPullRequestsSchema,
+  hostingPullRequestDetailSchema,
   hostingListReposSchema,
   hostingPollLoginSchema,
   hostingSetOAuthAppSchema,
@@ -111,6 +112,27 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(
     IpcChannels.AppCheckUpdates,
     wrap(null, () => updates.checkForUpdates())
+  )
+
+  ipcMain.handle(
+    IpcChannels.AppUpdateCapability,
+    wrap(null, async () => updates.canAutoUpdate())
+  )
+
+  ipcMain.handle(
+    IpcChannels.AppDownloadUpdate,
+    wrap(null, async () => {
+      await updates.downloadUpdate()
+      return null
+    })
+  )
+
+  ipcMain.handle(
+    IpcChannels.AppQuitAndInstall,
+    wrap(null, async () => {
+      updates.quitAndInstall()
+      return null
+    })
   )
 
   ipcMain.handle(
@@ -704,6 +726,11 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(
     IpcChannels.HostingListPullRequests,
     wrap(hostingListPullRequestsSchema, (req) => hosting.listPullRequests(req.path))
+  )
+
+  ipcMain.handle(
+    IpcChannels.HostingPullRequestDetail,
+    wrap(hostingPullRequestDetailSchema, (req) => hosting.pullRequestDetail(req.path, req.number))
   )
 
   ipcMain.handle(

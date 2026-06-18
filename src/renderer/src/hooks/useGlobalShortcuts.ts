@@ -5,12 +5,16 @@
  * (bubble-phase) listener while recording.
  */
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useRepoStore } from '../store/repoStore'
 import { useShortcutsStore } from '../store/shortcutsStore'
+import { useFetch, usePull, usePush, useStashSave } from './useRepo'
 import { SHORTCUT_COMMANDS, comboFromEvent, isBareCombo } from '../lib/shortcuts'
 
 const NEEDS_REPO = new Set(SHORTCUT_COMMANDS.filter((c) => c.needsRepo).map((c) => c.id))
+// Commands that run an engine mutation (which lives in a hook) rather than a
+// plain store action, so they're dispatched through a ref of live mutations.
+const MUTATION_COMMANDS = new Set(['fetch', 'pull', 'push', 'stash'])
 
 function runCommand(id: string): void {
   const s = useRepoStore.getState()
@@ -47,6 +51,16 @@ function runCommand(id: string): void {
 }
 
 export function useGlobalShortcuts(): void {
+  const activePath = useRepoStore((s) => s.activePath)
+  const fetch = useFetch(activePath ?? '')
+  const pull = usePull(activePath ?? '')
+  const push = usePush(activePath ?? '')
+  const stashSave = useStashSave(activePath ?? '')
+  // The keydown listener is registered once; keep the latest mutation handlers in
+  // a ref so it always invokes the ones bound to the current repo.
+  const mut = useRef({ fetch, pull, push, stashSave })
+  mut.current = { fetch, pull, push, stashSave }
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       // Interface zoom (Ctrl/Cmd +/-/0) — fixed, not rebindable. Handled before
@@ -84,6 +98,14 @@ export function useGlobalShortcuts(): void {
       }
       if (NEEDS_REPO.has(id) && !useRepoStore.getState().activePath) return
       e.preventDefault()
+      if (MUTATION_COMMANDS.has(id)) {
+        const m = mut.current
+        if (id === 'fetch') m.fetch.mutate(undefined)
+        else if (id === 'pull') m.pull.mutate(undefined)
+        else if (id === 'push') m.push.mutate(false)
+        else if (id === 'stash') m.stashSave.mutate(undefined)
+        return
+      }
       runCommand(id)
     }
     window.addEventListener('keydown', onKey)
