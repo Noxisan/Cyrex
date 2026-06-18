@@ -282,7 +282,9 @@ export const hostingConnectTokenSchema = z.object({
 export const hostingSetOAuthAppSchema = z.object({
   provider: providerId,
   clientId: z.string().min(1).max(256),
-  clientSecret: z.string().min(1).max(512)
+  // Empty is allowed: GitHub/GitLab device flow needs only the client id. Flows
+  // that require a secret (Bitbucket) enforce it in the wizard and the adapter.
+  clientSecret: z.string().max(512)
 })
 export const hostingClearOAuthAppSchema = z.object({ provider: providerId })
 export const hostingDisconnectSchema = z.object({ id: accountId })
