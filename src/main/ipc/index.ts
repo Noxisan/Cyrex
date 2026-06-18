@@ -115,6 +115,27 @@ export function registerIpcHandlers(): void {
   )
 
   ipcMain.handle(
+    IpcChannels.AppUpdateCapability,
+    wrap(null, async () => updates.canAutoUpdate())
+  )
+
+  ipcMain.handle(
+    IpcChannels.AppDownloadUpdate,
+    wrap(null, async () => {
+      await updates.downloadUpdate()
+      return null
+    })
+  )
+
+  ipcMain.handle(
+    IpcChannels.AppQuitAndInstall,
+    wrap(null, async () => {
+      updates.quitAndInstall()
+      return null
+    })
+  )
+
+  ipcMain.handle(
     IpcChannels.GitIdentity,
     wrap(identitySchema, (req) => engine.identityInfo(req.path))
   )

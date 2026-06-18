@@ -520,3 +520,9 @@ export interface UpdateInfo {
   /** A friendly reason the check failed (offline, rate-limited, …), if any. */
   error?: string
 }
+
+/** Progress/outcome of an in-app update download (electron-updater). */
+export type UpdateEvent =
+  | { type: 'progress'; percent: number }
+  | { type: 'downloaded'; version: string }
+  | { type: 'error'; message: string }

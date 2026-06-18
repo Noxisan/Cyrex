@@ -134,6 +134,12 @@ export function SettingsDialog(): React.JSX.Element | null {
   const [appVersion, setAppVersion] = useState('')
   const [update, setUpdate] = useState<UpdateInfo | null>(null)
   const [checking, setChecking] = useState(false)
+  const [canAuto, setCanAuto] = useState(false)
+  const [dl, setDl] = useState<{
+    state: 'idle' | 'downloading' | 'downloaded' | 'error'
+    percent: number
+    error: string
+  }>({ state: 'idle', percent: 0, error: '' })
   const bindings = useShortcutsStore((s) => s.bindings)
   const setBinding = useShortcutsStore((s) => s.setBinding)
   const resetBinding = useShortcutsStore((s) => s.resetBinding)
@@ -151,13 +157,27 @@ export function SettingsDialog(): React.JSX.Element | null {
     return () => window.removeEventListener('keydown', onKey)
   }, [closeSettings])
 
-  // Load the running version whenever Settings opens.
+  // Load the running version + auto-update capability whenever Settings opens.
   useEffect(() => {
     if (!open) return
     void window.cyrex.app.version().then((r) => {
       if (r.ok) setAppVersion(r.data)
     })
+    void window.cyrex.app.updateCapability().then((r) => {
+      if (r.ok) setCanAuto(r.data)
+    })
   }, [open])
+
+  // Stream download progress / completion / errors from electron-updater.
+  useEffect(
+    () =>
+      window.cyrex.app.onUpdateEvent((ev) => {
+        if (ev.type === 'progress') setDl({ state: 'downloading', percent: ev.percent, error: '' })
+        else if (ev.type === 'downloaded') setDl((d) => ({ ...d, state: 'downloaded' }))
+        else if (ev.type === 'error') setDl({ state: 'error', percent: 0, error: ev.message })
+      }),
+    []
+  )
 
   async function checkUpdates(): Promise<void> {
     setChecking(true)
@@ -168,6 +188,13 @@ export function SettingsDialog(): React.JSX.Element | null {
         ? r.data
         : { current: appVersion, latest: null, updateAvailable: false, url: null, error: r.error }
     )
+  }
+
+  async function downloadUpdate(): Promise<void> {
+    setDl({ state: 'downloading', percent: 0, error: '' })
+    const r = await window.cyrex.app.downloadUpdate()
+    if (r.ok) setDl((d) => ({ ...d, state: 'downloaded' }))
+    else setDl({ state: 'error', percent: 0, error: r.error })
   }
 
   // Record a new combo for a command. Captures in the capture phase so it
@@ -329,27 +356,67 @@ export function SettingsDialog(): React.JSX.Element | null {
                 </button>
               </Row>
               {update && !checking && (
-                <p className="mb-1 text-[11px] leading-snug">
+                <div className="mb-1 text-[11px] leading-snug">
                   {update.error ? (
                     <span className="text-danger">{t('settings.checkFailed')}</span>
                   ) : update.updateAvailable && update.latest ? (
-                    <span className="text-fg-muted">
-                      {t('settings.updateAvailable', { version: update.latest })}{' '}
-                      {update.url && (
-                        <a
-                          href={update.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-accent hover:underline"
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-fg-muted">
+                        {t('settings.updateAvailable', { version: update.latest })}
+                      </span>
+                      {canAuto && dl.state === 'downloading' ? (
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-2">
+                            <div
+                              className="h-full rounded-full bg-accent transition-[width] duration-150"
+                              style={{ width: `${dl.percent}%` }}
+                            />
+                          </div>
+                          <span className="shrink-0 text-fg-subtle">
+                            {t('settings.downloading')} {dl.percent}%
+                          </span>
+                        </div>
+                      ) : canAuto && dl.state === 'downloaded' ? (
+                        <button
+                          type="button"
+                          onClick={() => void window.cyrex.app.quitAndInstall()}
+                          className="self-start rounded-[var(--radius-card)] bg-accent px-2.5 py-1 text-xs font-medium text-accent-fg hover:bg-accent-hover"
                         >
-                          {t('settings.viewRelease')}
-                        </a>
+                          {t('settings.restartInstall')}
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          {canAuto && (
+                            <button
+                              type="button"
+                              onClick={() => void downloadUpdate()}
+                              className="rounded-[var(--radius-card)] bg-accent px-2.5 py-1 text-xs font-medium text-accent-fg hover:bg-accent-hover"
+                            >
+                              {t('settings.downloadInstall')}
+                            </button>
+                          )}
+                          {update.url && (
+                            <a
+                              href={update.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-accent hover:underline"
+                            >
+                              {t('settings.viewRelease')}
+                            </a>
+                          )}
+                        </div>
                       )}
-                    </span>
+                      {dl.state === 'error' && (
+                        <span className="text-danger">
+                          {dl.error || t('settings.downloadFailed')}
+                        </span>
+                      )}
+                    </div>
                   ) : (
                     <span className="text-diff-add">{t('settings.upToDate')}</span>
                   )}
-                </p>
+                </div>
               )}
               <Row label={t('settings.checkOnStartup')} desc={t('settings.checkOnStartupDesc')}>
                 <Segmented<'on' | 'off'>

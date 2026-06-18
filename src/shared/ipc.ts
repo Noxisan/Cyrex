@@ -147,6 +147,12 @@ export const IpcChannels = {
   AppVersion: 'app:version',
   /** Check the GitHub releases for a newer Cyrex version. */
   AppCheckUpdates: 'app:checkUpdates',
+  /** Whether this build can download and install updates itself. */
+  AppUpdateCapability: 'app:updateCapability',
+  /** Download the available update (progress streams on AppChannels.UpdateEvent). */
+  AppDownloadUpdate: 'app:downloadUpdate',
+  /** Quit and install a downloaded update. */
+  AppQuitAndInstall: 'app:quitAndInstall',
   /** Open a directory picker, returning the chosen path (or null). */
   PickDirectory: 'dialog:pickDirectory',
   // --- Remote hosting (GitHub / GitLab / Bitbucket). Tokens never cross IPC. ---
@@ -206,6 +212,11 @@ export const TerminalChannels = {
  */
 export const GitChannels = {
   Progress: 'git:progress'
+} as const
+
+/** Main→renderer push for in-app update download progress (electron-updater). */
+export const AppChannels = {
+  UpdateEvent: 'app:updateEvent'
 } as const
 
 /**
@@ -522,6 +533,18 @@ export interface IpcApi {
   [IpcChannels.AppCheckUpdates]: {
     request: void
     response: EngineResult<UpdateInfo>
+  }
+  [IpcChannels.AppUpdateCapability]: {
+    request: void
+    response: EngineResult<boolean>
+  }
+  [IpcChannels.AppDownloadUpdate]: {
+    request: void
+    response: EngineResult<null>
+  }
+  [IpcChannels.AppQuitAndInstall]: {
+    request: void
+    response: EngineResult<null>
   }
   [IpcChannels.PickDirectory]: {
     request: void
