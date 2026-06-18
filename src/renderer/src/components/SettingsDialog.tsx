@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Check,
+  Coffee,
   FileDiff,
+  Info,
   Keyboard,
   Minus,
   Monitor,
@@ -31,8 +33,23 @@ import { SHORTCUT_COMMANDS, comboFromEvent, comboKeys } from '../lib/shortcuts'
 import { MOD_KEY as MOD } from '../lib/platform'
 import { LANGUAGES } from '../i18n'
 import { IdentitySettings } from './IdentitySettings'
+import { ProviderIcon } from './BrandIcon'
+import markUrl from '../../../../build/icon.png'
 
-type SectionId = 'general' | 'appearance' | 'diff' | 'git' | 'shortcuts'
+type SectionId = 'general' | 'appearance' | 'diff' | 'git' | 'shortcuts' | 'about'
+
+/** Core technologies, shown on the About page. */
+const TECH = [
+  'Electron',
+  'React',
+  'TypeScript',
+  'electron-vite',
+  'Tailwind CSS',
+  'Zustand',
+  'TanStack Query',
+  'i18next',
+  'Lucide'
+]
 
 /** Built-in, non-rebindable shortcuts shown for reference. */
 function fixedShortcuts(t: (k: string) => string): { keys: string[]; label: string }[] {
@@ -230,7 +247,8 @@ export function SettingsDialog(): React.JSX.Element | null {
     { id: 'appearance', label: t('settings.appearance'), icon: Palette },
     { id: 'diff', label: t('settings.diff'), icon: FileDiff },
     { id: 'git', label: t('settings.git'), icon: UserRound },
-    { id: 'shortcuts', label: t('settings.shortcuts'), icon: Keyboard }
+    { id: 'shortcuts', label: t('settings.shortcuts'), icon: Keyboard },
+    { id: 'about', label: t('settings.about'), icon: Info }
   ]
 
   return (
@@ -712,6 +730,60 @@ export function SettingsDialog(): React.JSX.Element | null {
                   </li>
                 ))}
               </ul>
+            </section>
+          )}
+
+          {section === 'about' && (
+            <section>
+              <div className="flex items-center gap-3">
+                <img src={markUrl} alt="" className="size-12 shrink-0 rounded-[8px]" />
+                <div className="min-w-0">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-lg font-semibold tracking-wide text-accent">CYREX</span>
+                    <span className="font-mono text-xs text-fg-subtle">v{appVersion || '—'}</span>
+                  </div>
+                  <p className="text-xs text-fg-muted">{t('settings.aboutTagline')}</p>
+                </div>
+              </div>
+
+              <p className="mt-4 text-xs text-fg">{t('settings.createdBy', { author: 'Noxisan' })}</p>
+
+              <div className="mt-2 flex flex-wrap gap-2">
+                <a
+                  href="https://github.com/Noxisan/Cyrex"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1.5 rounded-[var(--radius-card)] border border-border px-2.5 py-1.5 text-xs text-fg-muted hover:bg-surface-2 hover:text-fg"
+                >
+                  <ProviderIcon id="github" size={14} /> {t('settings.viewSource')}
+                </a>
+                <a
+                  href="https://ko-fi.com/noxisan"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1.5 rounded-[var(--radius-card)] border border-border px-2.5 py-1.5 text-xs text-fg-muted hover:bg-surface-2 hover:text-accent"
+                >
+                  <Coffee size={14} strokeWidth={1.75} /> {t('settings.supportKofi')}
+                </a>
+              </div>
+
+              <div className="mt-5 border-t border-border pt-3">
+                <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-fg-subtle">
+                  {t('settings.builtWith')}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {TECH.map((name) => (
+                    <span
+                      key={name}
+                      className="rounded-[var(--radius-card)] bg-surface-2 px-2 py-0.5 text-[11px] text-fg-muted"
+                    >
+                      {name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <p className="mt-4 text-[11px] text-fg-subtle">MIT License · © Noxisan</p>
             </section>
           )}
         </div>
