@@ -31,7 +31,11 @@ export const SHORTCUT_COMMANDS: ShortcutCommand[] = [
     labelKey: 'actions.pullRequests',
     defaultCombo: 'mod+shift+p',
     needsRepo: true
-  }
+  },
+  { id: 'fetch', labelKey: 'actions.fetch', defaultCombo: 'mod+shift+f', needsRepo: true },
+  { id: 'pull', labelKey: 'actions.pull', defaultCombo: 'mod+shift+arrowdown', needsRepo: true },
+  { id: 'push', labelKey: 'actions.push', defaultCombo: 'mod+shift+arrowup', needsRepo: true },
+  { id: 'stash', labelKey: 'actions.stash', defaultCombo: 'mod+shift+s', needsRepo: true }
 ]
 
 export const DEFAULT_BINDINGS: Record<string, string> = Object.fromEntries(

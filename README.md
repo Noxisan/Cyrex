@@ -23,8 +23,10 @@ A calm, cross-platform visual Git client for Windows, Linux, and macOS. Cyrex tu
 - Stage by file, hunk, and line; amend; signed commits where configured.
 - Branch, merge, rebase (including interactive), cherry-pick, revert, stash.
 - Side-by-side and inline diffs with syntax highlighting.
-- Multi-repo management with quick switching.
-- Calm, flat, minimal UI with a single crimson accent, light and dark themes, and 11 bundled languages.
+- One wizard to open, clone (from a connected account or any git URL), or create a new local repository.
+- Hosting integration with GitHub, GitLab, and Bitbucket: browser (OAuth) or token sign-in, and pull/merge request listing and creation.
+- Multi-repo management with quick switching, and an in-app update check.
+- Calm, flat, minimal UI with a single crimson accent, light and dark themes, adjustable text size, and 11 bundled languages.
 
 ## Install
 
@@ -40,17 +42,17 @@ Prefer to build it yourself? See [Build from source](#build-from-source).
 
 Cyrex aims to cover everyday Git work and then some — all rendered from real repository state, never faked.
 
-**Core Git** — open and switch repositories, a visual commit graph with lanes/refs/tags, full working-tree status, and branch checkout/create/rename/delete. Commit, amend, and sign; merge, cherry-pick, and revert; rebase, including an interactive rebase UI.
+**Core Git** — a single wizard to open, clone (from a connected account or any git URL), or create a new local repository (`git init`); switch between repositories; a visual commit graph with lanes/refs/tags; full working-tree status; and branch checkout/create/rename/delete. Commit, amend, and sign; merge, cherry-pick, and revert; rebase, including an interactive rebase UI.
 
 **Staging & diffs** — stage and unstage by file, hunk, or line; inline and side-by-side diffs with syntax highlighting; visual image diffs (before/after with dimensions and size); and a Conventional Commit helper.
 
 **Branches, tags & worktrees** — stash save/apply/pop/drop; lightweight and annotated tags; worktrees; submodules with status and init/update/sync; Git LFS awareness; and visual `.gitignore` editing with a live match preview.
 
-**Remotes & hosting** — fetch, pull, push, and upstream tracking; conflict detection and a resolution UI; and credential-safe integration with GitHub, GitLab, and Bitbucket (browse, clone, create, link).
+**Remotes & hosting** — fetch (manual or on an auto-fetch interval), pull, push, and upstream tracking; conflict detection and a resolution UI; and credential-safe integration with GitHub, GitLab, and Bitbucket — browser (OAuth) or token sign-in, browse, clone, create, link, and listing/creating pull (merge) requests.
 
 **Navigation & safety** — blame and per-file history, commit search by message/author/hash, an undo (reflog) surface, a command palette (Cmd/Ctrl+K), drag-and-drop branch merge/rebase, and clear confirmation on every destructive action.
 
-**Experience** — an embedded terminal, multi-repo management, light/dark/system themes with accent palettes, and 11 bundled languages.
+**Experience** — an embedded terminal, multi-repo management, light/dark/system themes with accent palettes, adjustable interface text size, an in-app update check (with a startup notification), and 11 bundled languages.
 
 ## Supported languages
 
@@ -79,7 +81,7 @@ Connecting GitHub, GitLab, or Bitbucket accounts works out of the box via person
 
 Bitbucket has no device flow, so it uses an OAuth consumer (Workspace settings, OAuth consumers). Set its callback URL to `http://localhost:47600/callback`, grant the Account (read) and Repositories (read and write) permissions, and pass the consumer's key/secret as the two variables above. When a provider's variables are unset, Cyrex falls back to token paste for that provider.
 
-For Bitbucket you don't have to rebuild at all: pick Bitbucket in the connect dialog, choose **Log in with browser**, and Cyrex prompts once for the consumer Key and Secret (stored in the OS keychain). The `CYREX_BITBUCKET_*` build vars are only for shipping a build where end users never see that prompt.
+You don't have to rebuild to use browser login. For any provider, pick it in the connect dialog, choose **Log in with browser**, and Cyrex prompts once for the OAuth app's identifier — a Client ID (GitHub), an Application ID (GitLab), or a consumer Key and Secret (Bitbucket) — stored in the OS keychain. GitHub and GitLab use device flow (no secret); GitLab's application must be public ("Confidential" unchecked) with the `api` scope. The `CYREX_*` build vars above are only for shipping a build where end users never see that prompt.
 
 Note: Bitbucket app passwords are deprecated (they stop working 2026-06-09); the token-paste path uses an Atlassian API token (`id.atlassian.com`) created with scopes `read:user:bitbucket`, `read:repository:bitbucket`, `write:repository:bitbucket`, entered as `email:api_token`.
 
