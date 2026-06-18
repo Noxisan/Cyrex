@@ -101,7 +101,17 @@ export const gitlab: HostingProvider = {
       headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ client_id: id, scope: SCOPES })
     })
-    if (!res.ok) throw new Error(`Could not start GitLab login (HTTP ${res.status}).`)
+    if (!res.ok) {
+      // Surface GitLab's own reason (invalid_scope, invalid_client, …) instead of
+      // a bare status — the cause is almost always app config: the application
+      // must be public ("Confidential" unchecked) and granted the `api` scope.
+      const body = (await res.json().catch(() => null)) as {
+        error?: string
+        error_description?: string
+      } | null
+      const reason = body?.error_description || body?.error || `HTTP ${res.status}`
+      throw new Error(`Could not start GitLab login: ${reason}`)
+    }
     const d = (await res.json()) as {
       device_code: string
       user_code: string

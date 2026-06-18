@@ -100,7 +100,14 @@ export const github: HostingProvider = {
       headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'User-Agent': UA },
       body: JSON.stringify({ client_id: id, scope: SCOPES })
     })
-    if (!res.ok) throw new Error(`Could not start GitHub login (HTTP ${res.status}).`)
+    if (!res.ok) {
+      const body = (await res.json().catch(() => null)) as {
+        error?: string
+        error_description?: string
+      } | null
+      const reason = body?.error_description || body?.error || `HTTP ${res.status}`
+      throw new Error(`Could not start GitHub login: ${reason}`)
+    }
     const d = (await res.json()) as {
       device_code: string
       user_code: string
