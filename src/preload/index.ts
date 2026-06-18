@@ -177,6 +177,8 @@ export const cyrexApi = {
       input: { name: string; description?: string; private: boolean }
     ) => invoke(IpcChannels.HostingCreateRepo, { accountId, ...input }),
     pullRequests: (path: string) => invoke(IpcChannels.HostingListPullRequests, { path }),
+    pullRequestDetail: (path: string, number: number) =>
+      invoke(IpcChannels.HostingPullRequestDetail, { path, number }),
     createPullRequest: (
       path: string,
       input: {

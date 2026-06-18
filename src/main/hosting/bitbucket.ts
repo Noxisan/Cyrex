@@ -21,9 +21,11 @@ import type {
   CreateRepoInput,
   HostingAccount,
   PullRequest,
+  PullRequestDetail,
   RemoteRepo
 } from '@shared/types'
 import { getOAuthApp } from '../credentials'
+import { parseUnifiedDiff } from '../git/diff'
 import type { DeviceCode, DevicePoll, HostingProvider, RepoCoords } from './types'
 
 const API = 'https://api.bitbucket.org/2.0'
@@ -142,6 +144,13 @@ async function api<T>(secret: string, path: string, init?: RequestInit): Promise
     throw new Error(`Bitbucket API error ${res.status}${detail ? `: ${detail}` : ''}`)
   }
   return (await res.json()) as T
+}
+
+/** Authenticated GET returning the raw response text (e.g. a PR's unified diff). */
+async function apiText(secret: string, path: string): Promise<string> {
+  const url = path.startsWith('http') ? path : `${API}${path}`
+  const res = await fetchWithTimeout(url, { headers: { Authorization: authHeader(secret) } })
+  return res.ok ? res.text() : ''
 }
 
 // ── OAuth browser login (authorization code over loopback) ──────────────────
@@ -397,6 +406,17 @@ export const bitbucket: HostingProvider = {
     return body.values.map(toPullRequest)
   },
 
+  async getPullRequest(
+    secret: string,
+    repo: RepoCoords,
+    number: number
+  ): Promise<PullRequestDetail> {
+    const slug = `${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.name)}`
+    const pr = await api<BbPull>(secret, `/repositories/${slug}/pullrequests/${number}`)
+    const diff = await apiText(secret, `/repositories/${slug}/pullrequests/${number}/diff`)
+    return { pr: toPullRequest(pr), body: pr.description ?? '', files: parseUnifiedDiff(diff) }
+  },
+
   async createPullRequest(
     secret: string,
     repo: RepoCoords,
@@ -419,6 +439,7 @@ export const bitbucket: HostingProvider = {
 interface BbPull {
   id: number
   title: string
+  description?: string
   state: 'OPEN' | 'MERGED' | 'DECLINED' | 'SUPERSEDED'
   author: { nickname?: string; display_name?: string } | null
   source: { branch: { name: string } }

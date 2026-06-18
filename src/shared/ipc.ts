@@ -24,6 +24,7 @@ import type {
   LfsStatus,
   LogOptions,
   PullRequest,
+  PullRequestDetail,
   PullRequestList,
   RebaseResult,
   RebaseTodoItem,
@@ -171,6 +172,8 @@ export const IpcChannels = {
   HostingCreateRepo: 'hosting:createRepo',
   /** List open pull/merge requests for the active repo's remote. */
   HostingListPullRequests: 'hosting:listPullRequests',
+  /** One pull/merge request with its description and changed-file diffs. */
+  HostingPullRequestDetail: 'hosting:pullRequestDetail',
   /** Open a pull/merge request from the active repo's connected account. */
   HostingCreatePullRequest: 'hosting:createPullRequest',
   /** Clone a repo; the account's token is resolved in-process, not via IPC. */
@@ -569,6 +572,10 @@ export interface IpcApi {
   [IpcChannels.HostingListPullRequests]: {
     request: { path: string }
     response: EngineResult<PullRequestList>
+  }
+  [IpcChannels.HostingPullRequestDetail]: {
+    request: { path: string; number: number }
+    response: EngineResult<PullRequestDetail>
   }
   [IpcChannels.HostingCreatePullRequest]: {
     request: {

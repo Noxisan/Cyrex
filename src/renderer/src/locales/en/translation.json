@@ -36,6 +36,8 @@
     "loading": "Loading pull requests…",
     "empty": "No open pull requests.",
     "openInBrowser": "Open in browser",
+    "back": "Back",
+    "viewChanges": "View changes",
     "unsupported": "This repository's remote is not a supported hosting provider (GitHub, GitLab, or Bitbucket).",
     "noAccount": "Connect a {{provider}} account to view and create pull requests.",
     "connectAccount": "Connect account"

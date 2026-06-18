@@ -11,9 +11,11 @@ import type {
   CreateRepoInput,
   HostingAccount,
   PullRequest,
+  PullRequestDetail,
   RemoteRepo
 } from '@shared/types'
 import { getOAuthApp } from '../credentials'
+import { parseUnifiedDiff } from '../git/diff'
 import type { DeviceCode, DevicePoll, HostingProvider, RepoCoords } from './types'
 
 const BASE = 'https://gitlab.com'
@@ -202,6 +204,22 @@ export const gitlab: HostingProvider = {
     return mrs.map(toPullRequest)
   },
 
+  async getPullRequest(
+    token: string,
+    repo: RepoCoords,
+    number: number
+  ): Promise<PullRequestDetail> {
+    const id = encodeURIComponent(repo.fullPath)
+    const mr = await api<GlMergeRequest>(token, `/projects/${id}/merge_requests/${number}`)
+    // `/changes` returns per-file hunks; rebuild a unified diff the parser reads.
+    const data = await api<{ changes?: GlChange[] }>(
+      token,
+      `/projects/${id}/merge_requests/${number}/changes`
+    )
+    const diff = (data.changes ?? []).map(changeToDiff).join('')
+    return { pr: toPullRequest(mr), body: mr.description ?? '', files: parseUnifiedDiff(diff) }
+  },
+
   async createPullRequest(
     token: string,
     repo: RepoCoords,
@@ -223,10 +241,31 @@ export const gitlab: HostingProvider = {
   }
 }
 
+interface GlChange {
+  old_path: string
+  new_path: string
+  new_file: boolean
+  deleted_file: boolean
+  renamed_file: boolean
+  diff: string
+}
+
+/** Rebuild a git-style unified diff for one MR change so parseUnifiedDiff reads it. */
+function changeToDiff(c: GlChange): string {
+  let head = `diff --git a/${c.old_path} b/${c.new_path}\n`
+  if (c.new_file) head += 'new file mode 100644\n'
+  else if (c.deleted_file) head += 'deleted file mode 100644\n'
+  else if (c.renamed_file) head += `rename from ${c.old_path}\nrename to ${c.new_path}\n`
+  head += `--- ${c.new_file ? '/dev/null' : `a/${c.old_path}`}\n`
+  head += `+++ ${c.deleted_file ? '/dev/null' : `b/${c.new_path}`}\n`
+  return head + c.diff + (c.diff.endsWith('\n') ? '' : '\n')
+}
+
 interface GlMergeRequest {
   id: number
   iid: number
   title: string
+  description: string | null
   state: 'opened' | 'closed' | 'merged' | 'locked'
   draft: boolean
   web_url: string
