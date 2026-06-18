@@ -15,6 +15,10 @@ import { ProviderIcon } from './BrandIcon'
 // REDIRECT_PORT in the main-process bitbucket adapter).
 const BITBUCKET_CALLBACK = 'http://localhost:47600/callback'
 
+// A valid URL to drop into GitHub's required Homepage/callback fields. Device
+// flow never uses the callback, so any valid URL works; the project URL is tidy.
+const GITHUB_APP_URL = 'https://github.com/Noxisan/Cyrex'
+
 const PROVIDER_LABEL: Record<HostingProviderId, string> = {
   github: 'GitHub',
   gitlab: 'GitLab',
@@ -276,8 +280,14 @@ export function ConnectWizard({ onClose }: { onClose: () => void }): React.JSX.E
           ) : (
             <>
               <li>{t('hosting.ghOauthStep1')}</li>
-              <li>{t('hosting.ghOauthStep2')}</li>
+              <li>
+                {t('hosting.ghOauthStep2')}{' '}
+                <code className="rounded bg-surface-2 px-1 py-0.5 text-fg-muted">
+                  {GITHUB_APP_URL}
+                </code>
+              </li>
               <li>{t('hosting.ghOauthStep3')}</li>
+              <li>{t('hosting.ghOauthStep4')}</li>
             </>
           )}
         </ol>
