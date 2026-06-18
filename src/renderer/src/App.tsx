@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useRepoStore } from './store/repoStore'
 import { useProgressStore } from './store/progressStore'
+import { useToastStore } from './store/toastStore'
 import { useGlobalShortcuts } from './hooks/useGlobalShortcuts'
+import { useAutoFetch } from './hooks/useRepo'
 import { TitleBar } from './components/TitleBar'
 import { GitProgressBar } from './components/GitProgressBar'
 import { ResizeHandle } from './components/ResizeHandle'
@@ -39,6 +42,7 @@ const loadDetailWidth = (): number => {
 export function App(): React.JSX.Element {
   const activePath = useRepoStore((s) => s.activePath)
   const viewMode = useRepoStore((s) => s.viewMode)
+  const autoFetchMinutes = useRepoStore((s) => s.autoFetchMinutes)
   const setProgress = useProgressStore((s) => s.setProgress)
 
   // Feed the global progress bar from the main-process git progress stream.
@@ -46,6 +50,25 @@ export function App(): React.JSX.Element {
 
   // Customizable keyboard shortcuts (Settings → Shortcuts).
   useGlobalShortcuts()
+
+  // Background auto-fetch for the active repo (Settings → General; 0 = off).
+  useAutoFetch(activePath, autoFetchMinutes)
+
+  // One-shot update check on launch (Settings → General toggle). Notifies via a
+  // toast when a newer release exists; failures stay silent.
+  const { t } = useTranslation()
+  const pushToast = useToastStore((s) => s.push)
+  useEffect(() => {
+    if (!useRepoStore.getState().checkUpdatesOnStartup) return
+    let cancelled = false
+    void window.cyrex.app.checkForUpdates().then((res) => {
+      if (cancelled || !res.ok || !res.data.updateAvailable || !res.data.latest) return
+      pushToast(t('settings.updateToast', { version: res.data.latest }), 'info')
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [t, pushToast])
 
   // Resizable commit-detail panel: drag its left edge to widen/narrow it.
   const splitRef = useRef<HTMLDivElement>(null)

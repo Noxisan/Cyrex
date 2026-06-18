@@ -2,18 +2,29 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Check,
+  FileDiff,
   Keyboard,
+  Minus,
   Monitor,
   Moon,
   Palette,
+  Plus,
   RotateCcw,
   SlidersHorizontal,
   Sun,
   UserRound,
   X
 } from 'lucide-react'
-import { ACCENTS, useRepoStore } from '../store/repoStore'
-import type { ThemeMode, ViewMode } from '../store/repoStore'
+import {
+  ACCENTS,
+  AUTO_FETCH_OPTIONS,
+  DIFF_TAB_WIDTHS,
+  MAX_FONT_SCALE,
+  MIN_FONT_SCALE,
+  useRepoStore
+} from '../store/repoStore'
+import type { DateFormat, DiffMode, ThemeMode, ViewMode } from '../store/repoStore'
+import type { UpdateInfo } from '@shared/types'
 import { useShortcutsStore } from '../store/shortcutsStore'
 import { TEMPLATES, CUSTOM_ID, CUSTOM_FIELDS } from '../lib/templates'
 import { SHORTCUT_COMMANDS, comboFromEvent, comboKeys } from '../lib/shortcuts'
@@ -21,7 +32,7 @@ import { MOD_KEY as MOD } from '../lib/platform'
 import { LANGUAGES } from '../i18n'
 import { IdentitySettings } from './IdentitySettings'
 
-type SectionId = 'general' | 'appearance' | 'git' | 'shortcuts'
+type SectionId = 'general' | 'appearance' | 'diff' | 'git' | 'shortcuts'
 
 /** Built-in, non-rebindable shortcuts shown for reference. */
 function fixedShortcuts(t: (k: string) => string): { keys: string[]; label: string }[] {
@@ -29,15 +40,29 @@ function fixedShortcuts(t: (k: string) => string): { keys: string[]; label: stri
     { keys: ['G', 'H'], label: t('settings.shortcut.goHistory') },
     { keys: ['G', 'C'], label: t('settings.shortcut.goChanges') },
     { keys: [`${MOD}`, '↵'], label: t('settings.shortcut.commit') },
+    { keys: [`${MOD}`, '+'], label: t('settings.zoomIn') },
+    { keys: [`${MOD}`, '−'], label: t('settings.zoomOut') },
+    { keys: [`${MOD}`, '0'], label: t('settings.zoomReset') },
     { keys: ['Esc'], label: t('settings.shortcut.dismiss') }
   ]
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }): React.JSX.Element {
+function Row({
+  label,
+  desc,
+  children
+}: {
+  label: string
+  desc?: string
+  children: React.ReactNode
+}): React.JSX.Element {
   return (
     <div className="flex items-center justify-between gap-4 py-2.5">
-      <span className="text-xs text-fg">{label}</span>
-      <div className="flex items-center gap-1.5">{children}</div>
+      <div className="min-w-0">
+        <div className="text-xs text-fg">{label}</div>
+        {desc && <div className="mt-0.5 text-[11px] leading-snug text-fg-subtle">{desc}</div>}
+      </div>
+      <div className="flex shrink-0 items-center gap-1.5">{children}</div>
     </div>
   )
 }
@@ -90,11 +115,31 @@ export function SettingsDialog(): React.JSX.Element | null {
   const setCustomDark = useRepoStore((s) => s.setCustomDark)
   const defaultView = useRepoStore((s) => s.defaultView)
   const setDefaultView = useRepoStore((s) => s.setDefaultView)
+  const fontScale = useRepoStore((s) => s.fontScale)
+  const setFontScale = useRepoStore((s) => s.setFontScale)
+  const diffMode = useRepoStore((s) => s.diffMode)
+  const setDiffMode = useRepoStore((s) => s.setDiffMode)
+  const diffWrap = useRepoStore((s) => s.diffWrap)
+  const setDiffWrap = useRepoStore((s) => s.setDiffWrap)
+  const diffTabWidth = useRepoStore((s) => s.diffTabWidth)
+  const setDiffTabWidth = useRepoStore((s) => s.setDiffTabWidth)
+  const autoFetchMinutes = useRepoStore((s) => s.autoFetchMinutes)
+  const setAutoFetchMinutes = useRepoStore((s) => s.setAutoFetchMinutes)
+  const restoreLastRepo = useRepoStore((s) => s.restoreLastRepo)
+  const setRestoreLastRepo = useRepoStore((s) => s.setRestoreLastRepo)
+  const dateFormat = useRepoStore((s) => s.dateFormat)
+  const setDateFormat = useRepoStore((s) => s.setDateFormat)
+  const checkUpdatesOnStartup = useRepoStore((s) => s.checkUpdatesOnStartup)
+  const setCheckUpdatesOnStartup = useRepoStore((s) => s.setCheckUpdatesOnStartup)
+  const [appVersion, setAppVersion] = useState('')
+  const [update, setUpdate] = useState<UpdateInfo | null>(null)
+  const [checking, setChecking] = useState(false)
   const bindings = useShortcutsStore((s) => s.bindings)
   const setBinding = useShortcutsStore((s) => s.setBinding)
   const resetBinding = useShortcutsStore((s) => s.resetBinding)
   const resetAll = useShortcutsStore((s) => s.resetAll)
-  const [section, setSection] = useState<SectionId>('general')
+  const section = useRepoStore((s) => s.settingsSection)
+  const setSection = useRepoStore((s) => s.setSettingsSection)
   const [recordingId, setRecordingId] = useState<string | null>(null)
 
   // Escape dismisses (the Cmd/Ctrl+, toggle is owned by the global dispatcher).
@@ -105,6 +150,25 @@ export function SettingsDialog(): React.JSX.Element | null {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [closeSettings])
+
+  // Load the running version whenever Settings opens.
+  useEffect(() => {
+    if (!open) return
+    void window.cyrex.app.version().then((r) => {
+      if (r.ok) setAppVersion(r.data)
+    })
+  }, [open])
+
+  async function checkUpdates(): Promise<void> {
+    setChecking(true)
+    const r = await window.cyrex.app.checkForUpdates()
+    setChecking(false)
+    setUpdate(
+      r.ok
+        ? r.data
+        : { current: appVersion, latest: null, updateAvailable: false, url: null, error: r.error }
+    )
+  }
 
   // Record a new combo for a command. Captures in the capture phase so it
   // pre-empts the global dispatcher; Escape cancels without closing Settings.
@@ -137,6 +201,7 @@ export function SettingsDialog(): React.JSX.Element | null {
   const nav: { id: SectionId; label: string; icon: typeof Sun }[] = [
     { id: 'general', label: t('settings.general'), icon: SlidersHorizontal },
     { id: 'appearance', label: t('settings.appearance'), icon: Palette },
+    { id: 'diff', label: t('settings.diff'), icon: FileDiff },
     { id: 'git', label: t('settings.git'), icon: UserRound },
     { id: 'shortcuts', label: t('settings.shortcuts'), icon: Keyboard }
   ]
@@ -186,7 +251,7 @@ export function SettingsDialog(): React.JSX.Element | null {
           {section === 'general' && (
             <section>
               <h3 className="mb-3 text-sm font-semibold text-fg">{t('settings.general')}</h3>
-              <Row label={t('settings.language')}>
+              <Row label={t('settings.language')} desc={t('settings.languageDesc')}>
                 <select
                   value={i18n.language}
                   onChange={(e) => void i18n.changeLanguage(e.target.value)}
@@ -201,13 +266,98 @@ export function SettingsDialog(): React.JSX.Element | null {
                 </select>
               </Row>
               <div className="border-t border-border" />
-              <Row label={t('settings.startView')}>
+              <Row label={t('settings.startView')} desc={t('settings.startViewDesc')}>
                 <Segmented<ViewMode>
                   value={defaultView}
                   onChange={setDefaultView}
                   options={[
                     { value: 'history', label: t('tabs.history') },
                     { value: 'changes', label: t('tabs.changes') }
+                  ]}
+                />
+              </Row>
+              <div className="border-t border-border" />
+              <Row label={t('settings.restoreLastRepo')} desc={t('settings.restoreLastRepoDesc')}>
+                <Segmented<'on' | 'off'>
+                  value={restoreLastRepo ? 'on' : 'off'}
+                  onChange={(v) => setRestoreLastRepo(v === 'on')}
+                  options={[
+                    { value: 'off', label: t('settings.off') },
+                    { value: 'on', label: t('settings.on') }
+                  ]}
+                />
+              </Row>
+              <div className="border-t border-border" />
+              <Row label={t('settings.autoFetch')} desc={t('settings.autoFetchDesc')}>
+                <select
+                  value={autoFetchMinutes}
+                  onChange={(e) => setAutoFetchMinutes(Number(e.target.value))}
+                  className="cursor-pointer rounded-[var(--radius-card)] border border-border bg-bg px-2 py-1 text-xs text-fg outline-none"
+                >
+                  {AUTO_FETCH_OPTIONS.map((m) => (
+                    <option key={m} value={m}>
+                      {m === 0 ? t('settings.off') : `${m} ${t('settings.minutesShort')}`}
+                    </option>
+                  ))}
+                </select>
+              </Row>
+              <div className="border-t border-border" />
+              <Row label={t('settings.dateFormat')} desc={t('settings.dateFormatDesc')}>
+                <Segmented<DateFormat>
+                  value={dateFormat}
+                  onChange={setDateFormat}
+                  options={[
+                    { value: 'relative', label: t('settings.dateRelative') },
+                    { value: 'absolute', label: t('settings.dateAbsolute') }
+                  ]}
+                />
+              </Row>
+
+              <div className="mt-2 border-t border-border" />
+              <p className="mb-1 mt-3 text-[11px] font-medium uppercase tracking-wide text-fg-subtle">
+                {t('settings.updates')}
+              </p>
+              <Row label={t('settings.currentVersion')}>
+                <span className="font-mono text-xs text-fg">{appVersion || '—'}</span>
+                <button
+                  type="button"
+                  onClick={() => void checkUpdates()}
+                  disabled={checking}
+                  className="rounded-[var(--radius-card)] border border-border px-2.5 py-1 text-xs text-fg-muted hover:bg-surface-2 hover:text-fg disabled:opacity-40"
+                >
+                  {checking ? t('settings.checking') : t('settings.checkUpdates')}
+                </button>
+              </Row>
+              {update && !checking && (
+                <p className="mb-1 text-[11px] leading-snug">
+                  {update.error ? (
+                    <span className="text-danger">{t('settings.checkFailed')}</span>
+                  ) : update.updateAvailable && update.latest ? (
+                    <span className="text-fg-muted">
+                      {t('settings.updateAvailable', { version: update.latest })}{' '}
+                      {update.url && (
+                        <a
+                          href={update.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-accent hover:underline"
+                        >
+                          {t('settings.viewRelease')}
+                        </a>
+                      )}
+                    </span>
+                  ) : (
+                    <span className="text-diff-add">{t('settings.upToDate')}</span>
+                  )}
+                </p>
+              )}
+              <Row label={t('settings.checkOnStartup')} desc={t('settings.checkOnStartupDesc')}>
+                <Segmented<'on' | 'off'>
+                  value={checkUpdatesOnStartup ? 'on' : 'off'}
+                  onChange={(v) => setCheckUpdatesOnStartup(v === 'on')}
+                  options={[
+                    { value: 'off', label: t('settings.off') },
+                    { value: 'on', label: t('settings.on') }
                   ]}
                 />
               </Row>
@@ -294,7 +444,7 @@ export function SettingsDialog(): React.JSX.Element | null {
               )}
               <div className="border-t border-border" />
 
-              <Row label={t('settings.theme')}>
+              <Row label={t('settings.theme')} desc={t('settings.themeDesc')}>
                 <Segmented<ThemeMode>
                   value={themeMode}
                   onChange={setThemeMode}
@@ -304,6 +454,41 @@ export function SettingsDialog(): React.JSX.Element | null {
                     { value: 'system', label: t('settings.themeSystem'), icon: Monitor }
                   ]}
                 />
+              </Row>
+              <div className="border-t border-border" />
+              <Row label={t('settings.zoom')} desc={t('settings.zoomDesc')}>
+                <button
+                  type="button"
+                  onClick={() => setFontScale(fontScale - 0.1)}
+                  disabled={fontScale <= MIN_FONT_SCALE}
+                  aria-label={t('settings.zoomOut')}
+                  className="rounded-[var(--radius-card)] border border-border p-1 text-fg-muted hover:bg-surface-2 hover:text-fg disabled:opacity-40"
+                >
+                  <Minus size={13} strokeWidth={2} />
+                </button>
+                <span className="w-12 text-center text-xs tabular-nums text-fg">
+                  {Math.round(fontScale * 100)}%
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setFontScale(fontScale + 0.1)}
+                  disabled={fontScale >= MAX_FONT_SCALE}
+                  aria-label={t('settings.zoomIn')}
+                  className="rounded-[var(--radius-card)] border border-border p-1 text-fg-muted hover:bg-surface-2 hover:text-fg disabled:opacity-40"
+                >
+                  <Plus size={13} strokeWidth={2} />
+                </button>
+                {fontScale !== 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setFontScale(1)}
+                    title={t('settings.zoomReset')}
+                    aria-label={t('settings.zoomReset')}
+                    className="rounded-[var(--radius-card)] p-1 text-fg-subtle hover:bg-surface-2 hover:text-fg"
+                  >
+                    <RotateCcw size={13} strokeWidth={1.75} />
+                  </button>
+                )}
               </Row>
               <div className="border-t border-border" />
               <div className="py-3">
@@ -326,6 +511,41 @@ export function SettingsDialog(): React.JSX.Element | null {
                   ))}
                 </div>
               </div>
+            </section>
+          )}
+
+          {section === 'diff' && (
+            <section>
+              <h3 className="mb-3 text-sm font-semibold text-fg">{t('settings.diff')}</h3>
+              <Row label={t('settings.diffDefaultView')} desc={t('settings.diffDefaultViewDesc')}>
+                <Segmented<DiffMode>
+                  value={diffMode}
+                  onChange={setDiffMode}
+                  options={[
+                    { value: 'inline', label: t('diff.inline') },
+                    { value: 'split', label: t('diff.split') }
+                  ]}
+                />
+              </Row>
+              <div className="border-t border-border" />
+              <Row label={t('settings.diffWrap')} desc={t('settings.diffWrapDesc')}>
+                <Segmented<'on' | 'off'>
+                  value={diffWrap ? 'on' : 'off'}
+                  onChange={(v) => setDiffWrap(v === 'on')}
+                  options={[
+                    { value: 'off', label: t('settings.off') },
+                    { value: 'on', label: t('settings.on') }
+                  ]}
+                />
+              </Row>
+              <div className="border-t border-border" />
+              <Row label={t('settings.diffTabWidth')} desc={t('settings.diffTabWidthDesc')}>
+                <Segmented<string>
+                  value={String(diffTabWidth)}
+                  onChange={(v) => setDiffTabWidth(Number(v))}
+                  options={DIFF_TAB_WIDTHS.map((w) => ({ value: String(w), label: String(w) }))}
+                />
+              </Row>
             </section>
           )}
 

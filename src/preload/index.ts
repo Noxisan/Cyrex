@@ -4,7 +4,7 @@
  * Secrets never transit this layer — only repo metadata defined in @shared.
  */
 
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webFrame } from 'electron'
 import { GitChannels, IpcChannels, TerminalChannels, WindowChannels } from '@shared/ipc'
 import type { IpcApi } from '@shared/ipc'
 import type {
@@ -26,6 +26,11 @@ function invoke<C extends keyof IpcApi>(channel: C, payload?: Req<C>): Promise<R
 
 export const cyrexApi = {
   engineInfo: () => invoke(IpcChannels.EngineInfo),
+  /** App version + GitHub release update check (no repo data leaves the app). */
+  app: {
+    version: () => invoke(IpcChannels.AppVersion),
+    checkForUpdates: () => invoke(IpcChannels.AppCheckUpdates)
+  },
   identity: (path?: string) => invoke(IpcChannels.GitIdentity, { path }),
   setGlobalIdentity: (name: string, email: string) =>
     invoke(IpcChannels.GitSetGlobalIdentity, { name, email }),
@@ -34,6 +39,8 @@ export const cyrexApi = {
   clearRepoIdentity: (path: string) => invoke(IpcChannels.GitClearRepoIdentity, { path }),
   openRepoDialog: () => invoke(IpcChannels.RepoOpenDialog),
   openRepo: (path: string) => invoke(IpcChannels.RepoOpen, { path }),
+  initRepo: (parentDir: string, name: string) =>
+    invoke(IpcChannels.RepoInit, { parentDir, name }),
   status: (path: string) => invoke(IpcChannels.RepoStatus, { path }),
   log: (path: string, options?: Req<typeof IpcChannels.RepoLog>['options']) =>
     invoke(IpcChannels.RepoLog, { path, options }),
@@ -190,6 +197,8 @@ export const cyrexApi = {
     minimize: (): Promise<void> => ipcRenderer.invoke(WindowChannels.Minimize),
     maximizeToggle: (): Promise<boolean> => ipcRenderer.invoke(WindowChannels.MaximizeToggle),
     close: (): Promise<void> => ipcRenderer.invoke(WindowChannels.Close),
+    /** Scale the whole renderer (interface zoom / text size). Renderer-local. */
+    setZoom: (factor: number): void => webFrame.setZoomFactor(factor),
     isMaximized: (): Promise<boolean> => ipcRenderer.invoke(WindowChannels.IsMaximized),
     onMaximizeChange: (cb: (isMax: boolean) => void): (() => void) => {
       const listener = (_e: unknown, isMax: boolean): void => cb(isMax)

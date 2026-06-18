@@ -61,6 +61,19 @@ export async function openRepo(path: string): Promise<RepoRef> {
   return { path: root, name: basename(root) }
 }
 
+/**
+ * Create a new local repository: make `parentDir/name` and run `git init` in it.
+ * The initial branch is pinned to `main` regardless of the user's git defaults.
+ * Refuses to clobber an existing folder so nothing on disk is overwritten.
+ */
+export async function initRepo(parentDir: string, name: string): Promise<RepoRef> {
+  const target = join(parentDir, name)
+  if (existsSync(target)) throw new Error(`A folder named "${name}" already exists here.`)
+  await mkdir(target, { recursive: true })
+  await runGit(['init', '-b', 'main'], { cwd: target })
+  return openRepo(target)
+}
+
 // --- git identity ----------------------------------------------------------
 //
 // View/configure the author identity recorded on commits. Names/emails are not

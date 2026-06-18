@@ -40,12 +40,36 @@ function runCommand(id: string): void {
     case 'undo':
       s.openReflog()
       break
+    case 'pullRequests':
+      s.openPRPanel()
+      break
   }
 }
 
 export function useGlobalShortcuts(): void {
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
+      // Interface zoom (Ctrl/Cmd +/-/0) — fixed, not rebindable. Handled before
+      // the binding match so it always wins and pre-empts the browser's own zoom.
+      if (e.ctrlKey || e.metaKey) {
+        const s = useRepoStore.getState()
+        if (e.key === '+' || e.key === '=') {
+          e.preventDefault()
+          s.setFontScale(s.fontScale + 0.1)
+          return
+        }
+        if (e.key === '-' || e.key === '_') {
+          e.preventDefault()
+          s.setFontScale(s.fontScale - 0.1)
+          return
+        }
+        if (e.key === '0') {
+          e.preventDefault()
+          s.setFontScale(1)
+          return
+        }
+      }
+
       const combo = comboFromEvent(e)
       if (!combo) return
       const { bindings } = useShortcutsStore.getState()

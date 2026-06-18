@@ -496,3 +496,18 @@ export type PullRequestList =
   | { status: 'ok'; provider: HostingProviderId; repo: string; items: PullRequest[] }
   | { status: 'unsupported'; reason: string }
   | { status: 'noAccount'; provider: HostingProviderId }
+
+// ── App updates ─────────────────────────────────────────────────────────────
+
+/** Result of checking the GitHub releases for a newer Cyrex version. */
+export interface UpdateInfo {
+  /** The running app version, e.g. "0.2.0". */
+  current: string
+  /** Latest published release version, or null if the check couldn't determine one. */
+  latest: string | null
+  updateAvailable: boolean
+  /** The release page URL, when a newer version exists. */
+  url: string | null
+  /** A friendly reason the check failed (offline, rate-limited, …), if any. */
+  error?: string
+}

@@ -15,10 +15,31 @@ import { ProviderIcon } from './BrandIcon'
 // REDIRECT_PORT in the main-process bitbucket adapter).
 const BITBUCKET_CALLBACK = 'http://localhost:47600/callback'
 
+// A valid URL to drop into the required Homepage/Redirect/callback fields of a
+// GitHub or GitLab OAuth app. Device flow never uses it, so any valid URL works;
+// the project URL is tidy.
+const OAUTH_PLACEHOLDER_URL = 'https://github.com/Noxisan/Cyrex'
+
+// i18n key for the client-id field placeholder, per provider's own terminology.
+const CLIENT_ID_PLACEHOLDER_KEY: Record<HostingProviderId, string> = {
+  github: 'hosting.oauthClientIdPlaceholder',
+  gitlab: 'hosting.glClientIdPlaceholder',
+  bitbucket: 'hosting.oauthKeyPlaceholder'
+}
+
 const PROVIDER_LABEL: Record<HostingProviderId, string> = {
   github: 'GitHub',
   gitlab: 'GitLab',
   bitbucket: 'Bitbucket'
+}
+
+// Browser login uses different OAuth flows: device flow (GitHub/GitLab) needs
+// only a public client id, while an authorization-code consumer (Bitbucket)
+// also needs a client secret. This drives whether the setup step asks for one.
+const NEEDS_OAUTH_SECRET: Record<HostingProviderId, boolean> = {
+  github: false,
+  gitlab: false,
+  bitbucket: true
 }
 
 /**
@@ -79,7 +100,8 @@ export function ConnectWizard({ onClose }: { onClose: () => void }): React.JSX.E
   }
 
   function saveOAuthApp(): void {
-    if (!provider || !oauthId.trim() || !oauthSecret.trim()) return
+    if (!provider || !oauthId.trim()) return
+    if (NEEDS_OAUTH_SECRET[provider] && !oauthSecret.trim()) return
     setOAuthApp.mutate(
       { provider, clientId: oauthId.trim(), clientSecret: oauthSecret.trim() },
       {
@@ -248,35 +270,76 @@ export function ConnectWizard({ onClose }: { onClose: () => void }): React.JSX.E
         <h3 className="mb-1 text-sm font-semibold text-fg">
           {t('hosting.oauthSetupTitle', { provider: provider ? PROVIDER_LABEL[provider] : '' })}
         </h3>
-        <p className="mb-3 text-xs text-fg-muted">{t('hosting.oauthSetupHint')}</p>
+        <p className="mb-3 text-xs text-fg-muted">
+          {t(
+            provider === 'bitbucket'
+              ? 'hosting.oauthSetupHint'
+              : provider === 'gitlab'
+                ? 'hosting.glOauthSetupHint'
+                : 'hosting.ghOauthSetupHint'
+          )}
+        </p>
         <ol className="mb-3 list-decimal space-y-1 ps-4 text-[11px] text-fg-subtle">
-          <li>{t('hosting.oauthStep1')}</li>
-          <li>
-            {t('hosting.oauthStep2')}{' '}
-            <code className="rounded bg-surface-2 px-1 py-0.5 text-fg-muted">
-              {BITBUCKET_CALLBACK}
-            </code>
-          </li>
-          <li>{t('hosting.oauthStep3')}</li>
+          {provider === 'bitbucket' ? (
+            <>
+              <li>{t('hosting.oauthStep1')}</li>
+              <li>
+                {t('hosting.oauthStep2')}{' '}
+                <code className="rounded bg-surface-2 px-1 py-0.5 text-fg-muted">
+                  {BITBUCKET_CALLBACK}
+                </code>
+              </li>
+              <li>{t('hosting.oauthStep3')}</li>
+            </>
+          ) : provider === 'gitlab' ? (
+            <>
+              <li>{t('hosting.glOauthStep1')}</li>
+              <li>
+                {t('hosting.glOauthStep2')}{' '}
+                <code className="rounded bg-surface-2 px-1 py-0.5 text-fg-muted">
+                  {OAUTH_PLACEHOLDER_URL}
+                </code>
+              </li>
+              <li>{t('hosting.glOauthStep3')}</li>
+              <li>{t('hosting.glOauthStep4')}</li>
+            </>
+          ) : (
+            <>
+              <li>{t('hosting.ghOauthStep1')}</li>
+              <li>
+                {t('hosting.ghOauthStep2')}{' '}
+                <code className="rounded bg-surface-2 px-1 py-0.5 text-fg-muted">
+                  {OAUTH_PLACEHOLDER_URL}
+                </code>
+              </li>
+              <li>{t('hosting.ghOauthStep3')}</li>
+              <li>{t('hosting.ghOauthStep4')}</li>
+            </>
+          )}
         </ol>
         <input
           autoFocus
           type="text"
           value={oauthId}
-          placeholder={t('hosting.oauthKeyPlaceholder')}
+          placeholder={provider ? t(CLIENT_ID_PLACEHOLDER_KEY[provider]) : ''}
           onChange={(e) => setOauthId(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && provider && !NEEDS_OAUTH_SECRET[provider]) saveOAuthApp()
+          }}
           className="mb-2 w-full rounded-[var(--radius-card)] border border-border bg-bg px-2 py-1.5 font-mono text-xs text-fg outline-none focus:border-accent"
         />
-        <input
-          type="password"
-          value={oauthSecret}
-          placeholder={t('hosting.oauthSecretPlaceholder')}
-          onChange={(e) => setOauthSecret(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') saveOAuthApp()
-          }}
-          className="mb-4 w-full rounded-[var(--radius-card)] border border-border bg-bg px-2 py-1.5 font-mono text-xs text-fg outline-none focus:border-accent"
-        />
+        {provider && NEEDS_OAUTH_SECRET[provider] && (
+          <input
+            type="password"
+            value={oauthSecret}
+            placeholder={t('hosting.oauthSecretPlaceholder')}
+            onChange={(e) => setOauthSecret(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') saveOAuthApp()
+            }}
+            className="mb-2 w-full rounded-[var(--radius-card)] border border-border bg-bg px-2 py-1.5 font-mono text-xs text-fg outline-none focus:border-accent"
+          />
+        )}
         <div className="flex items-center justify-between gap-2">
           {/* Forget an already-stored consumer (e.g. before switching apps). */}
           {provider && deviceFlow(provider) ? (
@@ -305,7 +368,11 @@ export function ConnectWizard({ onClose }: { onClose: () => void }): React.JSX.E
             <button
               type="button"
               onClick={saveOAuthApp}
-              disabled={!oauthId.trim() || !oauthSecret.trim() || setOAuthApp.isPending}
+              disabled={
+                !oauthId.trim() ||
+                (provider != null && NEEDS_OAUTH_SECRET[provider] && !oauthSecret.trim()) ||
+                setOAuthApp.isPending
+              }
               className="rounded-[var(--radius-card)] bg-accent px-3 py-1.5 text-xs font-medium text-accent-fg hover:bg-accent-hover disabled:opacity-40"
             >
               {t('hosting.oauthSaveLogin')}

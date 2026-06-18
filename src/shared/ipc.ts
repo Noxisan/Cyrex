@@ -30,6 +30,7 @@ import type {
   ReflogEntry,
   RemoteRepo,
   RepoRef,
+  UpdateInfo,
   RepoStatus,
   Stash,
   Submodule,
@@ -42,6 +43,8 @@ export const IpcChannels = {
   RepoOpenDialog: 'repo:openDialog',
   /** Validate + register a repo path provided directly. */
   RepoOpen: 'repo:open',
+  /** Create a new local repository (git init in parentDir/name). */
+  RepoInit: 'repo:init',
   RepoStatus: 'repo:status',
   RepoLog: 'repo:log',
   RepoBranches: 'repo:branches',
@@ -139,6 +142,10 @@ export const IpcChannels = {
   GitClearRepoIdentity: 'git:clearRepoIdentity',
   /** Returns which engine backend is active (cli | nodegit). */
   EngineInfo: 'engine:info',
+  /** The running app version. */
+  AppVersion: 'app:version',
+  /** Check the GitHub releases for a newer Cyrex version. */
+  AppCheckUpdates: 'app:checkUpdates',
   /** Open a directory picker, returning the chosen path (or null). */
   PickDirectory: 'dialog:pickDirectory',
   // --- Remote hosting (GitHub / GitLab / Bitbucket). Tokens never cross IPC. ---
@@ -229,6 +236,10 @@ export interface IpcApi {
   }
   [IpcChannels.RepoOpen]: {
     request: { path: string }
+    response: EngineResult<RepoRef>
+  }
+  [IpcChannels.RepoInit]: {
+    request: { parentDir: string; name: string }
     response: EngineResult<RepoRef>
   }
   [IpcChannels.RepoStatus]: {
@@ -500,6 +511,14 @@ export interface IpcApi {
   [IpcChannels.EngineInfo]: {
     request: void
     response: EngineResult<EngineInfo>
+  }
+  [IpcChannels.AppVersion]: {
+    request: void
+    response: EngineResult<string>
+  }
+  [IpcChannels.AppCheckUpdates]: {
+    request: void
+    response: EngineResult<UpdateInfo>
   }
   [IpcChannels.PickDirectory]: {
     request: void

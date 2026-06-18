@@ -13,6 +13,7 @@ import { GitChannels, IpcChannels } from '@shared/ipc'
 import type { EngineResult, GitProgress, RepoRef } from '@shared/types'
 import * as engine from '../git/engine'
 import * as hosting from '../hosting/service'
+import * as updates from '../updates'
 import { imageVersions } from '../images'
 import { scrubSecrets } from '../git/cli'
 import {
@@ -31,6 +32,7 @@ import {
   hostingStartLoginSchema,
   identitySchema,
   imageVersionsSchema,
+  initSchema,
   setGlobalIdentitySchema,
   setRepoIdentitySchema,
   setRemoteSchema,
@@ -102,6 +104,16 @@ export function registerIpcHandlers(): void {
   )
 
   ipcMain.handle(
+    IpcChannels.AppVersion,
+    wrap(null, async () => updates.getAppVersion())
+  )
+
+  ipcMain.handle(
+    IpcChannels.AppCheckUpdates,
+    wrap(null, () => updates.checkForUpdates())
+  )
+
+  ipcMain.handle(
     IpcChannels.GitIdentity,
     wrap(identitySchema, (req) => engine.identityInfo(req.path))
   )
@@ -146,6 +158,11 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(
     IpcChannels.RepoOpen,
     wrap(repoPathSchema, (req) => engine.openRepo(req.path))
+  )
+
+  ipcMain.handle(
+    IpcChannels.RepoInit,
+    wrap(initSchema, (req) => engine.initRepo(req.parentDir, req.name))
   )
 
   ipcMain.handle(

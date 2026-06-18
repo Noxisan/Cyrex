@@ -251,16 +251,23 @@ const repoName = z
   .max(100)
   .regex(/^[A-Za-z0-9._-]+$/, 'invalid repository name')
 
-// HTTPS clone URL restricted to the supported hosts (defense in depth — the
-// renderer only ever passes URLs the provider API returned).
-const CLONE_HOSTS = new Set(['github.com', 'gitlab.com', 'bitbucket.org'])
+// A git clone URL. Accepts the forms a user actually pastes — https://…,
+// ssh://…, and scp-like git@host:path — across any host (the wizard offers a
+// free-form URL field, not just provider-listed repos). Rejects file:// and
+// cleartext http, and a leading '-' so the URL can never be read as a git option.
+// The engine passes it to `git clone` as a spawn argument (never a shell), so
+// there is no command-injection surface here.
 const cloneUrl = z
   .string()
-  .url()
+  .min(1)
+  .max(2048)
   .refine((u) => {
+    if (u.startsWith('-')) return false
+    // scp-like: git@host:owner/repo(.git)
+    if (/^[A-Za-z0-9._-]+@[^\s:/]+:[^\s].*$/.test(u)) return true
     try {
       const url = new URL(u)
-      return url.protocol === 'https:' && CLONE_HOSTS.has(url.hostname)
+      return url.protocol === 'https:' || url.protocol === 'ssh:'
     } catch {
       return false
     }
@@ -275,7 +282,9 @@ export const hostingConnectTokenSchema = z.object({
 export const hostingSetOAuthAppSchema = z.object({
   provider: providerId,
   clientId: z.string().min(1).max(256),
-  clientSecret: z.string().min(1).max(512)
+  // Empty is allowed: GitHub/GitLab device flow needs only the client id. Flows
+  // that require a secret (Bitbucket) enforce it in the wizard and the adapter.
+  clientSecret: z.string().max(512)
 })
 export const hostingClearOAuthAppSchema = z.object({ provider: providerId })
 export const hostingDisconnectSchema = z.object({ id: accountId })
@@ -308,6 +317,10 @@ export const cloneSchema = z.object({
   parentDir: z.string().min(1),
   name: folderName,
   accountId: accountId.optional()
+})
+export const initSchema = z.object({
+  parentDir: z.string().min(1),
+  name: folderName
 })
 export const setRemoteSchema = z.object({
   path: z.string().min(1),

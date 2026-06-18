@@ -13,6 +13,7 @@ import type {
   PullRequest,
   RemoteRepo
 } from '@shared/types'
+import { getOAuthApp } from '../credentials'
 import type { DeviceCode, DevicePoll, HostingProvider, RepoCoords } from './types'
 
 const BASE = 'https://gitlab.com'
@@ -22,7 +23,12 @@ const TOKEN_URL = `${BASE}/oauth/token`
 // `api` is needed to create projects and read private ones.
 const SCOPES = 'api'
 
+// A user-entered, keychain-stored application id wins over the build-time
+// define, so a user can enable browser login in-app without a rebuild. Device
+// flow needs only this public id (the GitLab app must be non-confidential).
 function clientId(): string {
+  const stored = getOAuthApp('gitlab')?.clientId
+  if (stored) return stored
   return typeof __GITLAB_CLIENT_ID__ === 'string' ? __GITLAB_CLIENT_ID__ : ''
 }
 
@@ -81,9 +87,10 @@ export const gitlab: HostingProvider = {
     return clientId().length > 0
   },
 
-  // GitLab login uses a build-time application id, not an in-app entry.
+  // A GitLab application id can be entered in-app to unlock device-flow browser
+  // login without a rebuild (no client secret needed for device flow).
   oauthConfigurable() {
-    return false
+    return true
   },
 
   async startDeviceLogin(): Promise<DeviceCode> {
@@ -94,7 +101,17 @@ export const gitlab: HostingProvider = {
       headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ client_id: id, scope: SCOPES })
     })
-    if (!res.ok) throw new Error(`Could not start GitLab login (HTTP ${res.status}).`)
+    if (!res.ok) {
+      // Surface GitLab's own reason (invalid_scope, invalid_client, …) instead of
+      // a bare status — the cause is almost always app config: the application
+      // must be public ("Confidential" unchecked) and granted the `api` scope.
+      const body = (await res.json().catch(() => null)) as {
+        error?: string
+        error_description?: string
+      } | null
+      const reason = body?.error_description || body?.error || `HTTP ${res.status}`
+      throw new Error(`Could not start GitLab login: ${reason}`)
+    }
     const d = (await res.json()) as {
       device_code: string
       user_code: string
