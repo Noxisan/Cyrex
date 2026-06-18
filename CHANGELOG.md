@@ -4,6 +4,39 @@ All notable changes to Cyrex are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-06-18
+
+### Added
+- Repository wizard: a mode-based Open / Clone / Create dialog. Create now does a
+  real local `git init`, and Clone accepts a pasted URL (any https/ssh git URL),
+  not just repositories from a connected account.
+- GitHub and GitLab browser login (OAuth device flow): enter an OAuth App client
+  id / Application ID once (stored in the OS keychain) to enable one-click
+  sign-in, or ship one via `CYREX_GITHUB_CLIENT_ID` / `CYREX_GITLAB_CLIENT_ID`.
+- Update checker: an Updates section in Settings shows the current version with a
+  Check for Updates button, plus an optional check on startup that notifies when
+  a newer GitHub release exists.
+- Interface text size (zoom) with a Settings control and `Ctrl/Cmd +`, `-`, `0`
+  shortcuts.
+- Diff view settings: persisted inline/side-by-side layout, line wrap, and tab
+  width.
+- General settings: background auto-fetch on an interval, reopen the last
+  repository on launch, and relative/absolute commit dates in the graph.
+- Command palette and shortcuts now cover Pull Requests (rebindable) and editing
+  `.gitignore`; the palette's Open Repository opens the new wizard.
+- Short descriptions under each setting, a Git Identity button in the top bar,
+  and the CYREX wordmark in the accent color.
+- `dev:x11` script to run the dev server via XWayland.
+
+### Fixed
+- Embedded terminal: run fish with `--no-config` so commands like `ls` work
+  (its interactive aliases assumed a TTY and broke in the pipe runner).
+- Browser login now surfaces the provider's real error (e.g. `invalid_scope`)
+  instead of a bare HTTP status when device authorization fails to start.
+- Taskbar and system-tray icon: trim the transparent padding so the mark fills
+  its slot instead of looking too small.
+- Remote URL parsing no longer leaves `.git` on a repo name for trailing-slash URLs.
+
 ## [0.2.0] - 2026-06-17
 
 ### Added
@@ -44,5 +77,6 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Hosting account integration (GitHub/GitLab/Bitbucket) for clone and auth.
 - Theming (light/dark + accent), and English/German localization.
 
+[0.3.0]: https://github.com/Noxisan/Cyrex/releases/tag/v0.3.0
 [0.2.0]: https://github.com/Noxisan/Cyrex/releases/tag/v0.2.0
 [0.1.0]: https://github.com/Noxisan/Cyrex/releases/tag/v0.1.0
