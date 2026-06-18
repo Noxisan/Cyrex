@@ -15,9 +15,17 @@ import { ProviderIcon } from './BrandIcon'
 // REDIRECT_PORT in the main-process bitbucket adapter).
 const BITBUCKET_CALLBACK = 'http://localhost:47600/callback'
 
-// A valid URL to drop into GitHub's required Homepage/callback fields. Device
-// flow never uses the callback, so any valid URL works; the project URL is tidy.
-const GITHUB_APP_URL = 'https://github.com/Noxisan/Cyrex'
+// A valid URL to drop into the required Homepage/Redirect/callback fields of a
+// GitHub or GitLab OAuth app. Device flow never uses it, so any valid URL works;
+// the project URL is tidy.
+const OAUTH_PLACEHOLDER_URL = 'https://github.com/Noxisan/Cyrex'
+
+// i18n key for the client-id field placeholder, per provider's own terminology.
+const CLIENT_ID_PLACEHOLDER_KEY: Record<HostingProviderId, string> = {
+  github: 'hosting.oauthClientIdPlaceholder',
+  gitlab: 'hosting.glClientIdPlaceholder',
+  bitbucket: 'hosting.oauthKeyPlaceholder'
+}
 
 const PROVIDER_LABEL: Record<HostingProviderId, string> = {
   github: 'GitHub',
@@ -263,7 +271,13 @@ export function ConnectWizard({ onClose }: { onClose: () => void }): React.JSX.E
           {t('hosting.oauthSetupTitle', { provider: provider ? PROVIDER_LABEL[provider] : '' })}
         </h3>
         <p className="mb-3 text-xs text-fg-muted">
-          {t(provider === 'bitbucket' ? 'hosting.oauthSetupHint' : 'hosting.ghOauthSetupHint')}
+          {t(
+            provider === 'bitbucket'
+              ? 'hosting.oauthSetupHint'
+              : provider === 'gitlab'
+                ? 'hosting.glOauthSetupHint'
+                : 'hosting.ghOauthSetupHint'
+          )}
         </p>
         <ol className="mb-3 list-decimal space-y-1 ps-4 text-[11px] text-fg-subtle">
           {provider === 'bitbucket' ? (
@@ -277,13 +291,25 @@ export function ConnectWizard({ onClose }: { onClose: () => void }): React.JSX.E
               </li>
               <li>{t('hosting.oauthStep3')}</li>
             </>
+          ) : provider === 'gitlab' ? (
+            <>
+              <li>{t('hosting.glOauthStep1')}</li>
+              <li>
+                {t('hosting.glOauthStep2')}{' '}
+                <code className="rounded bg-surface-2 px-1 py-0.5 text-fg-muted">
+                  {OAUTH_PLACEHOLDER_URL}
+                </code>
+              </li>
+              <li>{t('hosting.glOauthStep3')}</li>
+              <li>{t('hosting.glOauthStep4')}</li>
+            </>
           ) : (
             <>
               <li>{t('hosting.ghOauthStep1')}</li>
               <li>
                 {t('hosting.ghOauthStep2')}{' '}
                 <code className="rounded bg-surface-2 px-1 py-0.5 text-fg-muted">
-                  {GITHUB_APP_URL}
+                  {OAUTH_PLACEHOLDER_URL}
                 </code>
               </li>
               <li>{t('hosting.ghOauthStep3')}</li>
@@ -295,11 +321,7 @@ export function ConnectWizard({ onClose }: { onClose: () => void }): React.JSX.E
           autoFocus
           type="text"
           value={oauthId}
-          placeholder={
-            provider === 'bitbucket'
-              ? t('hosting.oauthKeyPlaceholder')
-              : t('hosting.oauthClientIdPlaceholder')
-          }
+          placeholder={provider ? t(CLIENT_ID_PLACEHOLDER_KEY[provider]) : ''}
           onChange={(e) => setOauthId(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && provider && !NEEDS_OAUTH_SECRET[provider]) saveOAuthApp()
