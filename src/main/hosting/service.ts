@@ -16,6 +16,7 @@ import type {
   HostingAccount,
   HostingProviderId,
   PullRequest,
+  PullRequestDetail,
   PullRequestList,
   RemoteRepo,
   RepoRef
@@ -251,6 +252,16 @@ export async function listPullRequests(repoPath: string): Promise<PullRequestLis
   if (!r.ok) return r.list
   const items = await getProvider(r.provider).listPullRequests(tokenFor(r.accountId), r.coords)
   return { status: 'ok', provider: r.provider, repo: r.coords.fullPath, items }
+}
+
+/** One pull/merge request with its description and changed-file diffs. */
+export async function pullRequestDetail(
+  repoPath: string,
+  number: number
+): Promise<PullRequestDetail> {
+  const r = await resolveHostedRepo(repoPath)
+  if (!r.ok) throw new Error("This repository's remote is not a supported hosting provider.")
+  return getProvider(r.provider).getPullRequest(tokenFor(r.accountId), r.coords, number)
 }
 
 /** Create a pull/merge request from the repo's connected account. */

@@ -296,6 +296,10 @@ export const hostingCreateRepoSchema = z.object({
   private: z.boolean()
 })
 export const hostingListPullRequestsSchema = z.object({ path: z.string().min(1) })
+export const hostingPullRequestDetailSchema = z.object({
+  path: z.string().min(1),
+  number: z.number().int().positive()
+})
 export const hostingCreatePullRequestSchema = z.object({
   path: z.string().min(1),
   title: z.string().min(1).max(256),

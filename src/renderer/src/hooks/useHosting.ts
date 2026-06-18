@@ -109,6 +109,14 @@ export function usePullRequests(path: string | null, enabled = true) {
   })
 }
 
+export function usePullRequestDetail(path: string | null, number: number | null) {
+  return useQuery({
+    queryKey: ['pullRequestDetail', path, number],
+    enabled: !!path && number != null,
+    queryFn: async () => unwrap(await window.cyrex.hosting.pullRequestDetail(path!, number!))
+  })
+}
+
 export function useCreatePullRequest(path: string) {
   return useHostingMutation(
     (input: CreatePullRequestInput) => window.cyrex.hosting.createPullRequest(path, input),

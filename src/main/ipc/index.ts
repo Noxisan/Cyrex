@@ -26,6 +26,7 @@ import {
   hostingCreateRepoSchema,
   hostingDisconnectSchema,
   hostingListPullRequestsSchema,
+  hostingPullRequestDetailSchema,
   hostingListReposSchema,
   hostingPollLoginSchema,
   hostingSetOAuthAppSchema,
@@ -704,6 +705,11 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(
     IpcChannels.HostingListPullRequests,
     wrap(hostingListPullRequestsSchema, (req) => hosting.listPullRequests(req.path))
+  )
+
+  ipcMain.handle(
+    IpcChannels.HostingPullRequestDetail,
+    wrap(hostingPullRequestDetailSchema, (req) => hosting.pullRequestDetail(req.path, req.number))
   )
 
   ipcMain.handle(

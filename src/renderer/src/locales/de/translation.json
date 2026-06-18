@@ -36,6 +36,8 @@
     "loading": "Pull Requests werden geladen…",
     "empty": "Keine offenen Pull Requests.",
     "openInBrowser": "Im Browser öffnen",
+    "back": "Zurück",
+    "viewChanges": "Änderungen ansehen",
     "unsupported": "Das Remote dieses Repositories gehört zu keinem unterstützten Hosting-Anbieter (GitHub, GitLab oder Bitbucket).",
     "noAccount": "Verbinde ein {{provider}}-Konto, um Pull Requests anzuzeigen und zu erstellen.",
     "connectAccount": "Konto verbinden"

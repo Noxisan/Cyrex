@@ -9,9 +9,11 @@ import type {
   CreateRepoInput,
   HostingAccount,
   PullRequest,
+  PullRequestDetail,
   RemoteRepo
 } from '@shared/types'
 import { getOAuthApp } from '../credentials'
+import { parseUnifiedDiff } from '../git/diff'
 import type { DeviceCode, DevicePoll, HostingProvider, RepoCoords } from './types'
 
 const API = 'https://api.github.com'
@@ -198,6 +200,25 @@ export const github: HostingProvider = {
     return prs.map(toPullRequest)
   },
 
+  async getPullRequest(
+    token: string,
+    repo: RepoCoords,
+    number: number
+  ): Promise<PullRequestDetail> {
+    const pr = await api<GhPull>(token, `/repos/${repo.owner}/${repo.name}/pulls/${number}`)
+    // The same endpoint returns a raw unified diff under the diff media type.
+    const res = await fetch(`${API}/repos/${repo.owner}/${repo.name}/pulls/${number}`, {
+      headers: {
+        Accept: 'application/vnd.github.diff',
+        'X-GitHub-Api-Version': '2022-11-28',
+        'User-Agent': UA,
+        Authorization: `Bearer ${token}`
+      }
+    })
+    const diff = res.ok ? await res.text() : ''
+    return { pr: toPullRequest(pr), body: pr.body ?? '', files: parseUnifiedDiff(diff) }
+  },
+
   async createPullRequest(
     token: string,
     repo: RepoCoords,
@@ -221,6 +242,7 @@ interface GhPull {
   id: number
   number: number
   title: string
+  body: string | null
   state: 'open' | 'closed'
   draft: boolean
   merged_at: string | null
