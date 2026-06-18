@@ -11,6 +11,7 @@ import type {
   PullRequest,
   RemoteRepo
 } from '@shared/types'
+import { getOAuthApp } from '../credentials'
 import type { DeviceCode, DevicePoll, HostingProvider, RepoCoords } from './types'
 
 const API = 'https://api.github.com'
@@ -19,7 +20,13 @@ const TOKEN_URL = 'https://github.com/login/oauth/access_token'
 const SCOPES = 'repo read:user'
 const UA = 'Cyrex'
 
+// The OAuth App client id can come from a user-entered, keychain-stored app
+// (preferred — no rebuild) or a build-time define. The runtime store wins so a
+// user can enable browser login in-app. Device flow needs only this public id;
+// there is no client secret to handle.
 function clientId(): string {
+  const stored = getOAuthApp('github')?.clientId
+  if (stored) return stored
   return typeof __GITHUB_CLIENT_ID__ === 'string' ? __GITHUB_CLIENT_ID__ : ''
 }
 
@@ -79,9 +86,10 @@ export const github: HostingProvider = {
     return clientId().length > 0
   },
 
-  // GitHub login uses a build-time public client id, not an in-app entry.
+  // A GitHub OAuth App's client id can be entered in-app to unlock device-flow
+  // browser login without a rebuild (no client secret needed for device flow).
   oauthConfigurable() {
-    return false
+    return true
   },
 
   async startDeviceLogin(): Promise<DeviceCode> {
