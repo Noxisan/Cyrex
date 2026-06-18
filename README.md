@@ -34,7 +34,7 @@ Download the latest installer for your platform from the [Releases page](https:/
 
 - **Windows** — `Cyrex-Setup-*.exe` (NSIS installer) or `Cyrex-*.exe` (portable).
 - **Linux** — `*.AppImage` or `*_amd64.deb`.
-- **macOS** — `*-arm64.dmg` (Apple Silicon). The build is currently unsigned, so on first launch allow it under System Settings → Privacy & Security.
+- **macOS** — `*-arm64.dmg` (Apple Silicon) or `*-x64.dmg` (Intel). The build is currently unsigned, so on first launch allow it under System Settings → Privacy & Security.
 
 Prefer to build it yourself? See [Build from source](#build-from-source).
 
