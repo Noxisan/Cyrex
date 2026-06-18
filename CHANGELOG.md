@@ -4,6 +4,24 @@ All notable changes to Cyrex are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-06-18
+
+### Added
+- Pull request review view: open a PR/MR from the list to see its description and
+  changed-file diffs rendered inline (using the app's diff settings), across
+  GitHub, GitLab, and Bitbucket.
+- In-app auto-update: when an update is available, Settings → Updates offers
+  Download & install with a progress bar, then Restart to install. Available on
+  packaged Windows (NSIS) and Linux AppImage builds; macOS (unsigned) and `.deb`
+  fall back to the release link.
+- About section in Settings: app version, author, links to the repository and
+  Ko-Fi, the technology stack, and the license.
+- Rebindable fetch, pull, push, and stash keyboard shortcuts.
+
+### Changed
+- macOS builds now produce both Apple Silicon (arm64) and Intel (x64) dmgs.
+- README synced with the 0.3.0 feature set and in-app browser-login options.
+
 ## [0.3.0] - 2026-06-18
 
 ### Added
@@ -77,6 +95,7 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Hosting account integration (GitHub/GitLab/Bitbucket) for clone and auth.
 - Theming (light/dark + accent), and English/German localization.
 
+[0.4.0]: https://github.com/Noxisan/Cyrex/releases/tag/v0.4.0
 [0.3.0]: https://github.com/Noxisan/Cyrex/releases/tag/v0.3.0
 [0.2.0]: https://github.com/Noxisan/Cyrex/releases/tag/v0.2.0
 [0.1.0]: https://github.com/Noxisan/Cyrex/releases/tag/v0.1.0
